@@ -7,7 +7,7 @@
         }
     },
     "config": {
-        "vendor-dir": "./vendor"
+        "vendor-dir": "$HOME/projects/unicourt-crm/vendor/espocrm/vendor"
     },
     "description": "EspoCRM with RadialFunction secret ingredients",
     "license": "GPL-3.0-only",
