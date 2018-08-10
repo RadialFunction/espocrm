@@ -52,7 +52,8 @@ Espo.define('crm:views/record/panels/history', 'crm:views/record/panels/activiti
                     ],
                     [
                         {name: 'status'},
-                        {name: 'dateSent'}
+                        {name: 'dateSent'},
+                        {name: 'hasAttachment', view: 'views/email/fields/has-attachment'}
                     ]
                 ]
             },
@@ -160,7 +161,7 @@ Espo.define('crm:views/record/panels/history', 'crm:views/record/panels/activiti
             }
 
             Espo.require('EmailHelper', function (EmailHelper) {
-                var emailHelper = new EmailHelper(this.getLanguage(), this.getUser(), this.getDateTime());
+                var emailHelper = new EmailHelper(this.getLanguage(), this.getUser(), this.getDateTime(), this.getAcl());
 
                 this.notify('Please wait...');
 

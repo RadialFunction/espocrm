@@ -128,6 +128,28 @@ class EntityManager
         return false;
     }
 
+    protected function checkRelationshipExists($name)
+    {
+        $name = ucfirst($name);
+
+        $scopeList = array_keys($this->getMetadata()->get(['scopes'], []));
+
+        foreach ($scopeList as $entityType) {
+            $relationsDefs = $this->getEntityManager()->getMetadata()->get($entityType, 'relations');
+            if (empty($relationsDefs)) continue;
+            foreach ($relationsDefs as $link => $item) {
+                if (empty($item['type'])) continue;
+                if (empty($item['relationName'])) continue;
+                if ($item['type'] === 'manyMany') {
+                    if (ucfirst($item['relationName']) === $name) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     public function create($name, $type, $params = [], $replaceData = [])
     {
         $name = ucfirst($name);
@@ -170,6 +192,10 @@ class EntityManager
 
         if (in_array(strtolower($name), $this->reservedWordList)) {
             throw new Conflict('Entity name \''.$name.'\' is not allowed.');
+        }
+
+        if ($this->checkRelationshipExists($name)) {
+            throw new Conflict('Relationship with the same name \''.$name.'\' exists.');
         }
 
         $normalizedName = Util::normilizeClassName($name);
@@ -283,6 +309,10 @@ class EntityManager
             $scopesData['isNotRemovable'] = true;
         }
 
+        if (!empty($params['kanbanStatusIgnoreList'])) {
+            $scopesData['kanbanStatusIgnoreList'] = $params['kanbanStatusIgnoreList'];
+        }
+
         $this->getMetadata()->set('scopes', $name, $scopesData);
 
         $filePath = $templatePath . "/Metadata/{$type}/entityDefs.json";
@@ -302,6 +332,18 @@ class EntityManager
             $clientDefsContents = str_replace('{'.$key.'}', $value, $clientDefsContents);
         }
         $clientDefsData = Json::decode($clientDefsContents, true);
+
+        if (array_key_exists('color', $params)) {
+            $clientDefsData['color'] = $params['color'];
+        }
+
+        if (array_key_exists('iconClass', $params)) {
+            $clientDefsData['iconClass'] = $params['iconClass'];
+        }
+
+        if (!empty($params['kanbanViewMode'])) {
+            $clientDefsData['kanbanViewMode'] = true;
+        }
         $this->getMetadata()->set('clientDefs', $name, $clientDefsData);
 
         $this->getBaseLanguage()->set('Global', 'scopeNames', $name, $labelSingular);
@@ -385,6 +427,42 @@ class EntityManager
                 )
             );
             $this->getMetadata()->set('entityDefs', $name, $entityDefsData);
+        }
+
+
+        if (isset($data['fullTextSearch'])) {
+            $entityDefsData = [
+                'collection' => [
+                    'fullTextSearch' => !!$data['fullTextSearch']
+                ]
+            ];
+            $this->getMetadata()->set('entityDefs', $name, $entityDefsData);
+        }
+
+        if (array_key_exists('kanbanStatusIgnoreList', $data)) {
+            $scopeData['kanbanStatusIgnoreList'] = $data['kanbanStatusIgnoreList'];
+            $this->getMetadata()->set('scopes', $name, $scopeData);
+        }
+
+        if (array_key_exists('kanbanViewMode', $data)) {
+            $clientDefsData = [
+                'kanbanViewMode' => $data['kanbanViewMode']
+            ];
+            $this->getMetadata()->set('clientDefs', $name, $clientDefsData);
+        }
+
+        if (array_key_exists('color', $data)) {
+            $clientDefsData = [
+                'color' => $data['color']
+            ];
+            $this->getMetadata()->set('clientDefs', $name, $clientDefsData);
+        }
+
+        if (array_key_exists('iconClass', $data)) {
+            $clientDefsData = [
+                'iconClass' => $data['iconClass']
+            ];
+            $this->getMetadata()->set('clientDefs', $name, $clientDefsData);
         }
 
         $this->getMetadata()->save();
@@ -504,6 +582,12 @@ class EntityManager
             } else {
                 $relationName = lcfirst($entity) . $entityForeign;
             }
+            if ($this->getMetadata()->get(['scopes', ucfirst($relationName)])) {
+                throw new Conflict("Entity with the same name '{$relationName}' exists.");
+            }
+            if ($this->checkRelationshipExists($relationName)) {
+                throw new Conflict("Relationship with the same name '{$relationName}' exists.");
+            }
         }
 
         if (empty($link) || empty($linkForeign)) {
@@ -578,7 +662,6 @@ class EntityManager
                         $link => array(
                             "type" => "linkMultiple",
                             "layoutDetailDisabled"  => !$linkMultipleField,
-                            "layoutListDisabled"  => true,
                             "layoutMassUpdateDisabled"  => !$linkMultipleField,
                             "noLoad"  => !$linkMultipleField,
                             "importDisabled" => !$linkMultipleField,
@@ -643,7 +726,6 @@ class EntityManager
                         $linkForeign => array(
                             "type" => "linkMultiple",
                             "layoutDetailDisabled"  => !$linkMultipleFieldForeign,
-                            "layoutListDisabled"  => true,
                             "layoutMassUpdateDisabled"  => !$linkMultipleFieldForeign,
                             "noLoad"  => !$linkMultipleFieldForeign,
                             "importDisabled" => !$linkMultipleFieldForeign,
@@ -667,7 +749,6 @@ class EntityManager
                         $link => array(
                             "type" => "linkMultiple",
                             "layoutDetailDisabled"  => !$linkMultipleField,
-                            "layoutListDisabled"  => true,
                             "layoutMassUpdateDisabled"  => !$linkMultipleField,
                             "importDisabled" => !$linkMultipleField,
                             "noLoad"  => !$linkMultipleField,
@@ -690,7 +771,6 @@ class EntityManager
                         $linkForeign => array(
                             "type" => "linkMultiple",
                             "layoutDetailDisabled"  => !$linkMultipleFieldForeign,
-                            "layoutListDisabled"  => true,
                             "layoutMassUpdateDisabled"  => !$linkMultipleFieldForeign,
                             "importDisabled" => !$linkMultipleFieldForeign,
                             "noLoad"  => !$linkMultipleFieldForeign,
@@ -764,7 +844,6 @@ class EntityManager
                         $link => array(
                             "type" => "linkMultiple",
                             "layoutDetailDisabled"  => !$linkMultipleField,
-                            "layoutListDisabled"  => true,
                             "layoutMassUpdateDisabled"  => !$linkMultipleField,
                             "noLoad"  => !$linkMultipleField,
                             "importDisabled" => !$linkMultipleField,
@@ -789,7 +868,6 @@ class EntityManager
                         $linkForeign => array(
                             "type" => "linkMultiple",
                             "layoutDetailDisabled"  => !$linkMultipleFieldForeign,
-                            "layoutListDisabled"  => true,
                             "layoutMassUpdateDisabled"  => !$linkMultipleFieldForeign,
                             "noLoad"  => !$linkMultipleFieldForeign,
                             "importDisabled" => !$linkMultipleFieldForeign,
@@ -947,5 +1025,34 @@ class EntityManager
             return $hook;
         }
         return;
+    }
+
+    public function resetToDefaults($scope)
+    {
+        if ($this->isCustom($scope)) {
+            throw new Error("Can't reset to defaults custom entity type '{$scope}.'");
+        }
+
+        $this->getMetadata()->delete('scopes', $scope, [
+            'disabled',
+            'stream',
+            'statusField',
+            'kanbanStatusIgnoreList'
+        ]);
+        $this->getMetadata()->delete('clientDefs', $scope, [
+            'iconClass',
+            'statusField',
+            'kanbanViewMode'
+        ]);
+        $this->getMetadata()->delete('entityDefs', $scope, [
+            'collection.sortBy',
+            'collection.asc',
+            'collection.textFilterFields'
+        ]);
+        $this->getMetadata()->save();
+
+        $this->getLanguage()->delete('Global', 'scopeNames', $scope);
+        $this->getLanguage()->delete('Global', 'scopeNamesPlural', $scope);
+        $this->getLanguage()->save();
     }
 }

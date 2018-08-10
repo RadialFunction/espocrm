@@ -5,7 +5,9 @@
    },
    "recordViews":{
       "edit":"crm:views/opportunity/record/edit",
-      "editSmall":"crm:views/opportunity/record/edit-small"
+      "editSmall":"crm:views/opportunity/record/edit-small",
+      "list":"crm:views/opportunity/record/list",
+      "kanban": "crm:views/opportunity/record/kanban"
    },
    "sidePanels":{
       "detail":[
@@ -69,5 +71,23 @@
       "listForContact": {
          "type": "listSmall"
       }
-   }
+   },
+   "kanbanViewMode": true,
+   "dynamicLogic": {
+      "fields": {
+         "lastStage": {
+             "visible": {
+                 "conditionGroup": [
+                     {
+                         "type": "equals",
+                         "attribute": "stage",
+                         "value": "Closed Lost"
+                     }
+                 ]
+             }
+         }
+      }
+   },
+   "color": "#9fc77e",
+   "iconClass": "fas fa-dollar-sign"
 }

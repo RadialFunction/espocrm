@@ -43,6 +43,19 @@ class Contact extends \Espo\Core\Templates\Services\Person
         'title'
     ];
 
+    protected $linkSelectParams = array(
+        'targetLists' => array(
+            'additionalColumns' => array(
+                'optedOut' => 'isOptedOut'
+            )
+        )
+    );
+
+    protected $mandatorySelectAttributeList = [
+        'accountId',
+        'accountName'
+    ];
+
     protected function afterCreateEntity(Entity $entity, $data)
     {
         if (!empty($data->emailId)) {

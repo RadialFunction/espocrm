@@ -1,7 +1,8 @@
 {
     "fields": {
         "name": {
-            "type": "personName"
+            "type": "personName",
+            "isPersonalData": true
         },
         "salutationName": {
             "type": "enum",
@@ -65,24 +66,28 @@
                     "distinct": true
                 }
             },
-            "trim": true
+            "trim": true,
+            "textFilterDisabled": true
         },
         "description": {
             "type": "text"
         },
         "emailAddress": {
-            "type": "email"
+            "type": "email",
+            "isPersonalData": true
         },
         "phoneNumber": {
             "type": "phone",
             "typeList": ["Mobile", "Office", "Home", "Fax", "Other"],
-            "defaultType": "Mobile"
+            "defaultType": "Mobile",
+            "isPersonalData": true
         },
         "doNotCall": {
             "type": "bool"
         },
         "address": {
-            "type": "address"
+            "type": "address",
+            "isPersonalData": true
         },
         "addressStreet": {
             "type": "text",
@@ -126,7 +131,8 @@
             "layoutFiltersDisabled": true,
             "exportDisabled": true,
             "importDisabled": true,
-            "view": "crm:views/contact/fields/account-role"
+            "view": "crm:views/contact/fields/account-role",
+            "textFilterDisabled": true
         },
         "accountIsInactive": {
             "type": "bool",
@@ -285,6 +291,12 @@
             "layoutListDisabled": true,
             "readOnly": true,
             "view": "views/fields/link-one"
+        },
+        "targetListIsOptedOut": {
+            "type": "bool",
+            "notStorable": true,
+            "readOnly": true,
+            "disabled": true
         }
     },
     "links": {

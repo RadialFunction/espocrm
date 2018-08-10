@@ -206,6 +206,11 @@ class EntityManager
         return $this->metadata;
     }
 
+    public function getOrmMetadata()
+    {
+        return $this->getMetadata();
+    }
+
     public function getPDO()
     {
         if (empty($this->pdo)) {
@@ -229,6 +234,11 @@ class EntityManager
         $seed = $this->getEntity($entityName);
         $collection = new EntityCollection($data, $seed, $this->entityFactory);
         return $collection;
+    }
+
+    public function getEntityFactory()
+    {
+        return $this->entityFactory;
     }
 
     protected function init()

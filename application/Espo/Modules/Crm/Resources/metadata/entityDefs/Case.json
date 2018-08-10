@@ -82,8 +82,7 @@
             "view": "views/fields/teams"
         },
         "attachments": {
-            "type": "attachmentMultiple",
-            "layoutListDisabled": true
+            "type": "attachmentMultiple"
         }
     },
     "links": {
@@ -166,7 +165,8 @@
     },
     "collection": {
         "sortBy": "number",
-        "asc": false
+        "asc": false,
+        "textFilterFields": ["name", "number"]
     },
     "indexes": {
         "status": {

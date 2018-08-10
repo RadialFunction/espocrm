@@ -91,6 +91,7 @@ class Application
     public function runClient()
     {
         $this->getContainer()->get('clientManager')->display();
+        exit;
     }
 
     public function runEntryPoint($entryPoint, $data = array(), $final = false)
@@ -127,7 +128,7 @@ class Application
 
             $slim->run();
         } catch (\Exception $e) {
-            $container->get('output')->processError($e->getMessage(), $e->getCode(), true);
+            $container->get('output')->processError($e->getMessage(), $e->getCode(), true, $e);
         }
     }
 
@@ -176,7 +177,7 @@ class Application
         try {
             $auth = $this->createAuth();
         } catch (\Exception $e) {
-            $container->get('output')->processError($e->getMessage(), $e->getCode());
+            $container->get('output')->processError($e->getMessage(), $e->getCode(), false, $e);
         }
 
         $apiAuth = $this->createApiAuth($auth);
@@ -226,7 +227,7 @@ class Application
                 $result = $controllerManager->process($controllerName, $actionName, $params, $data, $slim->request());
                 $container->get('output')->render($result);
             } catch (\Exception $e) {
-                $container->get('output')->processError($e->getMessage(), $e->getCode());
+                $container->get('output')->processError($e->getMessage(), $e->getCode(), false, $e);
             }
         });
 

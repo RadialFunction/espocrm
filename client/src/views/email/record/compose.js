@@ -62,13 +62,13 @@ Espo.define('views/email/record/compose', ['views/record/edit', 'views/email/rec
                 this.isBodyChanged = true;
             }, this);
 
-            if (this.options.keepAttachmentsOnSelectTemplate) {
+            if (!this.options.removeAttachmentsOnSelectTemplate) {
                 this.initialAttachmentsIds = this.model.get('attachmentsIds') || [];
                 this.initialAttachmentsNames = this.model.get('attachmentsNames') || {};
             }
 
             this.listenTo(this.model, 'insert-template', function (data) {
-                var body = this.model.get('body');
+                var body = this.model.get('body') || '';
 
                 var bodyPlain = body.replace(/<br\s*\/?>/mg, '');
                 bodyPlain = bodyPlain.replace(/<\/p\s*\/?>/mg, '');
@@ -119,11 +119,15 @@ Espo.define('views/email/record/compose', ['views/record/edit', 'views/email/rec
             }
 
             this.model.set('isHtml', data.isHtml);
-            this.model.set('name', data.subject);
+
+            if (data.subject) {
+                this.model.set('name', data.subject);
+            }
+
             this.model.set('body', '');
             this.model.set('body', body);
 
-            if (this.options.keepAttachmentsOnSelectTemplate) {
+            if (!this.options.removeAttachmentsOnSelectTemplate) {
                 this.initialAttachmentsIds.forEach(function (id) {
                     if (data.attachmentsIds) {
                         data.attachmentsIds.push(id);
@@ -217,5 +221,4 @@ Espo.define('views/email/record/compose', ['views/record/edit', 'views/email/rec
         }
 
     });
-
 });

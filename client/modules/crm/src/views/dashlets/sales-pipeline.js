@@ -43,6 +43,10 @@ Espo.define('crm:views/dashlets/sales-pipeline', 'crm:views/dashlets/abstract/ch
             if (this.getDateFilter() === 'between') {
                 url += '&dateFrom=' + this.getOption('dateFrom') + '&dateTo=' + this.getOption('dateTo');
             }
+
+            if (this.getOption('useLastStage')) {
+                url += '&useLastStage=true';
+            }
             return url;
         },
 
@@ -133,7 +137,7 @@ Espo.define('crm:views/dashlets/sales-pipeline', 'crm:views/dashlets/abstract/ch
                 mouse: {
                     track: true,
                     relative: true,
-                    position: 'ne',
+                    position: 'n',
                     lineColor: this.hoverColor,
                     trackFormatter: function (obj) {
                         if (obj.x >= self.chartData.length) {

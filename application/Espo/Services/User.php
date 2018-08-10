@@ -63,6 +63,21 @@ class User extends Record
         'accountsIds'
     ];
 
+    protected $mandatorySelectAttributeList = [
+        'isPortalUser',
+        'isActive',
+        'userName',
+        'isAdmin'
+    ];
+
+    protected $linkSelectParams = array(
+        'targetLists' => array(
+            'additionalColumns' => array(
+                'optedOut' => 'isOptedOut'
+            )
+        )
+    );
+
     protected function getMailSender()
     {
         return $this->getContainer()->get('mailSender');

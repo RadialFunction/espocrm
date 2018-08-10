@@ -70,6 +70,8 @@ return array (
         'da_DK',
         'de_DE',
         'es_ES',
+        'hr_HR',
+        'hu_HU',
         'fr_FR',
         'id_ID',
         'it_IT',
@@ -77,6 +79,7 @@ return array (
         'nb_NO',
         'nl_NL',
         'tr_TR',
+        'sk_SK',
         'sr_RS',
         'ro_RO',
         'ru_RU',
@@ -108,6 +111,7 @@ return array (
     'adminNotifications' => true,
     'adminNotificationsNewVersion' => true,
     'adminNotificationsCronIsNotConfigured' => true,
+    'adminNotificationsNewExtensionVersion' => true,
     'assignmentEmailNotifications' => false,
     'assignmentEmailNotificationsEntityList' => ['Lead', 'Opportunity', 'Task', 'Case'],
     'assignmentNotificationsEntityList' => ['Meeting', 'Call', 'Task', 'Email'],
@@ -166,6 +170,10 @@ return array (
     'aclAllowDeleteCreated' => false,
     'inlineAttachmentUploadMaxSize' => 20,
     'textFilterUseContainsForVarchar' => false,
+    'tabColorsDisabled' => false,
+    'massPrintPdfMaxCount' => 50,
+    'emailKeepParentTeamsEntityList' => ['Case'],
+    'recordListMaxSizeLimit' => 200,
     'isInstalled' => false
 );
 

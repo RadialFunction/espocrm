@@ -30,7 +30,7 @@ Espo.define('views/admin/layouts/list', 'views/admin/layouts/rows', function (De
 
     return Dep.extend({
 
-        dataAttributeList: ['name', 'width', 'link', 'notSortable', 'align', 'view', 'customLabel'],
+        dataAttributeList: ['name', 'width', 'link', 'notSortable', 'align', 'view', 'customLabel', 'widthPx'],
 
         dataAttributesDefs: {
             link: {type: 'bool'},
@@ -46,6 +46,10 @@ Espo.define('views/admin/layouts/list', 'views/admin/layouts/rows', function (De
             },
             customLabel: {
                 type: 'varchar',
+                readOnly: true
+            },
+            widthPx: {
+                type: 'int',
                 readOnly: true
             },
             name: {
@@ -123,10 +127,18 @@ Espo.define('views/admin/layouts/list', 'views/admin/layouts/rows', function (De
                         duplicateLabelList.push(label);
                     }
                     labelList.push(label);
-                    this.disabledFields.push({
-                        name: allFields[i],
+                    var fieldName = allFields[i];
+                    var o = {
+                        name: fieldName,
                         label: label
-                    });
+                    };
+                    var fieldType = this.getMetadata().get(['entityDefs', this.scope, 'fields', fieldName, 'type']);
+                    if (fieldType) {
+                        if (this.getMetadata().get(['fields', fieldType, 'notSortable'])) {
+                            o.notSortable = true;
+                        }
+                    }
+                    this.disabledFields.push(o);
                 }
             }
 
@@ -155,9 +167,7 @@ Espo.define('views/admin/layouts/list', 'views/admin/layouts/rows', function (De
         },
 
         checkFieldType: function (type) {
-            if (['linkMultiple'].indexOf(type) != -1) {
-                return false;
-            }
+
             return true;
         },
 

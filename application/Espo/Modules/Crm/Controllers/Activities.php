@@ -37,7 +37,7 @@ class Activities extends \Espo\Core\Controllers\Base
 {
     protected $maxCalendarRange = 123;
 
-    protected $maxSizeLimit = 200;
+    const MAX_SIZE_LIMIT = 200;
 
     public function actionListCalendarEvents($params, $data, $request)
     {
@@ -65,13 +65,23 @@ class Activities extends \Espo\Core\Controllers\Base
 
         $userId = $request->get('userId');
         $userIdList = $request->get('userIdList');
+        $teamIdList = $request->get('teamIdList');
+
+        if ($teamIdList) {
+            $teamIdList = explode(',', $teamIdList);
+            return $userResultList = $service->getEventsForTeams($teamIdList, $from, $to, $scopeList);
+        }
 
         if ($userIdList) {
             $userIdList = explode(',', $userIdList);
 
             $resultList = [];
             foreach ($userIdList as $userId) {
-                $userResultList = $service->getEvents($userId, $from, $to, $scopeList);
+                try {
+                    $userResultList = $service->getEvents($userId, $from, $to, $scopeList);
+                } catch (\Exception $e) {
+                    continue;
+                }
                 foreach ($userResultList as $item) {
                     $item['userId'] = $userId;
                     $resultList[] = $item;
@@ -103,11 +113,12 @@ class Activities extends \Espo\Core\Controllers\Base
 
         $futureDays = intval($request->get('futureDays'));
 
+        $maxSizeLimit = $this->getConfig()->get('recordListMaxSizeLimit', self::MAX_SIZE_LIMIT);
         if (empty($maxSize)) {
-            $maxSize = $this->maxSizeLimit;
+            $maxSize = $maxSizeLimit;
         }
-        if ($maxSize > $this->maxSizeLimit) {
-            throw new Forbidden("Max should should not exceed " . $this->maxSizeLimit . ". Use pagination (offset, limit).");
+        if (!empty($maxSize) && $maxSize > $maxSizeLimit) {
+            throw new Forbidden("Max should should not exceed " . $maxSizeLimit . ". Use offset and limit.");
         }
 
         return $service->getUpcomingActivities($userId, array(
@@ -165,11 +176,12 @@ class Activities extends \Espo\Core\Controllers\Base
         $sortBy = $request->get('sortBy');
         $where = $request->get('where');
 
+        $maxSizeLimit = $this->getConfig()->get('recordListMaxSizeLimit', self::MAX_SIZE_LIMIT);
         if (empty($maxSize)) {
-            $maxSize = $this->maxSizeLimit;
+            $maxSize = $maxSizeLimit;
         }
-        if ($maxSize > $this->maxSizeLimit) {
-            throw new Forbidden("Max should should not exceed " . $this->maxSizeLimit . ". Use pagination (offset, limit).");
+        if (!empty($maxSize) && $maxSize > $maxSizeLimit) {
+            throw new Forbidden("Max should should not exceed " . $maxSizeLimit . ". Use offset and limit.");
         }
 
         $scope = null;
