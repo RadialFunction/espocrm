@@ -32,7 +32,9 @@ Espo.define('views/fields/date', 'views/fields/base', function (Dep) {
 
         type: 'date',
 
-        listTemplate: 'fields/date/detail',
+        listTemplate: 'fields/date/list',
+
+        listLinkTemplate: 'fields/date/list-link',
 
         detailTemplate: 'fields/date/detail',
 
@@ -46,6 +48,16 @@ Espo.define('views/fields/date', 'views/fields/base', function (Dep) {
 
         setup: function () {
             Dep.prototype.setup.call(this);
+
+            if (this.getConfig().get('fiscalYearShift')) {
+                this.searchTypeList = Espo.Utils.clone(this.searchTypeList);
+                if (this.getConfig().get('fiscalYearShift') % 3 != 0) {
+                    this.searchTypeList.push('currentFiscalQuarter');
+                    this.searchTypeList.push('lastFiscalQuarter');
+                }
+                this.searchTypeList.push('currentFiscalYear');
+                this.searchTypeList.push('lastFiscalYear');
+            }
         },
 
         data: function () {
@@ -69,13 +81,13 @@ Espo.define('views/fields/date', 'views/fields/base', function (Dep) {
 
         stringifyDateValue: function (value) {
             if (!value) {
-                if (this.mode == 'edit' || this.mode == 'search' || this.mode === 'list') {
+                if (this.mode == 'edit' || this.mode == 'search' || this.mode == 'list' || this.mode == 'listLink') {
                     return '';
                 }
                 return this.translate('None');
             }
 
-            if (this.mode == 'list' || this.mode == 'detail') {
+            if (this.mode == 'list' || this.mode == 'detail' || this.mode == 'listLink') {
                 if (this.getConfig().get('readableDateFormatDisabled') || this.params.useNumericFormat) {
                     return this.getDateTime().toDisplayDate(value);
                 }
@@ -121,7 +133,7 @@ Espo.define('views/fields/date', 'views/fields/base', function (Dep) {
 
         afterRender: function () {
             if (this.mode == 'edit' || this.mode == 'search') {
-                this.$element = this.$el.find('[name="' + this.name + '"]');
+                this.$element = this.$el.find('[data-name="' + this.name + '"]');
 
                 var wait = false;
                 this.$element.on('change', function () {
@@ -162,7 +174,7 @@ Espo.define('views/fields/date', 'views/fields/base', function (Dep) {
                 }.bind(this));
 
                 if (this.mode == 'search') {
-                    var $elAdd = this.$el.find('input[name="' + this.name + '-additional"]');
+                    var $elAdd = this.$el.find('input.additional');
                     $elAdd.datepicker(options).on('show', function (e) {
                         $('body > .datepicker.datepicker-dropdown').css('z-index', 1200);
                     }.bind(this));
@@ -215,14 +227,14 @@ Espo.define('views/fields/date', 'views/fields/base', function (Dep) {
         fetchSearch: function () {
             var value = this.parseDate(this.$element.val());
 
-            var type = this.$el.find('[name="'+this.name+'-type"]').val();
+            var type = this.fetchSearchType();
             var data;
 
             if (type == 'between') {
                 if (!value) {
                     return false;
                 }
-                var valueTo = this.parseDate(this.$el.find('[name="' + this.name + '-additional"]').val());
+                var valueTo = this.parseDate(this.$el.find('input.additional').val());
                 if (!valueTo) {
                     return false;
                 }
@@ -233,7 +245,7 @@ Espo.define('views/fields/date', 'views/fields/base', function (Dep) {
                     dateValueTo: valueTo
                 };
             } else if (~['lastXDays', 'nextXDays', 'olderThanXDays', 'afterXDays'].indexOf(type)) {
-                var number = this.$el.find('[name="' + this.name + '-number"]').val();
+                var number = this.$el.find('input.number').val();
                 data = {
                     type: type,
                     value: number,

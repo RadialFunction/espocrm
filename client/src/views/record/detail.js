@@ -121,16 +121,7 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
 
         events: {
             'click .button-container .action': function (e) {
-                var $target = $(e.currentTarget);
-                var action = $target.data('action');
-                var data = $target.data();
-                if (action) {
-                    var method = 'action' + Espo.Utils.upperCaseFirst(action);
-                    if (typeof this[method] == 'function') {
-                        this[method].call(this, data, e);
-                        e.preventDefault();
-                    }
-                }
+                Espo.Utils.handleAction(this, e);
             }
         },
 
@@ -253,6 +244,14 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
             }
         },
 
+        disableActionItems: function () {
+            this.disableButtons();
+        },
+
+        enableActionItems: function () {
+            this.enableButtons();
+        },
+
         hideActionItem: function (name) {
             for (var i in this.buttonList) {
                 if (this.buttonList[i].name == name) {
@@ -346,7 +345,35 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
         },
 
         afterRender: function () {
-            var $container = this.$el.find('.detail-button-container');
+            this.initStickableButtonsContainer();
+            this.initFieldsControlBehaviour();
+        },
+
+        initFieldsControlBehaviour: function () {
+            var fields = this.getFieldViews();
+
+            var fieldInEditMode = null;
+            for (var field in fields) {
+                var fieldView = fields[field];
+                this.listenTo(fieldView, 'edit', function (view) {
+                    if (fieldInEditMode && fieldInEditMode.mode == 'edit') {
+                        fieldInEditMode.inlineEditClose();
+                    }
+                    fieldInEditMode = view;
+                }, this);
+
+                this.listenTo(fieldView, 'inline-edit-on', function () {
+                    this.inlineEditModeIsOn = true;
+                }, this);
+                this.listenTo(fieldView, 'inline-edit-off', function () {
+                    this.inlineEditModeIsOn = false;
+                    this.setIsNotChanged();
+                }, this);
+            }
+        },
+
+        initStickableButtonsContainer: function () {
+           var $container = this.$el.find('.detail-button-container');
 
             var stickTop = this.getThemeManager().getParam('stickTop') || 62;
             var blockHeight = this.getThemeManager().getParam('blockHeight') || 21;
@@ -369,7 +396,7 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                 var edge = $middle.position().top + $middle.outerHeight(true);
                 var scrollTop = $window.scrollTop();
 
-                if (scrollTop < edge) {
+                if (scrollTop < edge || this.stickButtonsContainerAllTheWay) {
                     if (scrollTop > stickTop) {
                         if (!$container.hasClass('stick-sub')) {
                             $container.addClass('stick-sub');
@@ -399,27 +426,6 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                     $block.show();
                 }
             }.bind(this));
-
-            var fields = this.getFieldViews();
-
-            var fieldInEditMode = null;
-            for (var field in fields) {
-                var fieldView = fields[field];
-                this.listenTo(fieldView, 'edit', function (view) {
-                    if (fieldInEditMode && fieldInEditMode.mode == 'edit') {
-                        fieldInEditMode.inlineEditClose();
-                    }
-                    fieldInEditMode = view;
-                }, this);
-
-                this.listenTo(fieldView, 'inline-edit-on', function () {
-                    this.inlineEditModeIsOn = true;
-                }, this);
-                this.listenTo(fieldView, 'inline-edit-off', function () {
-                    this.inlineEditModeIsOn = false;
-                    this.setIsNotChanged();
-                }, this);
-            }
         },
 
         fetch: function () {
@@ -984,12 +990,12 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
 
             var bottomView = this.getView('bottom');
             if (bottomView && 'setNotReadOnly' in bottomView) {
-                bottomView.setNotReadOnly();
+                bottomView.setNotReadOnly(onlyNotSetAsReadOnly);
             }
 
             var sideView = this.getView('side');
             if (sideView && 'setNotReadOnly' in sideView) {
-                sideView.setNotReadOnly();
+                sideView.setNotReadOnly(onlyNotSetAsReadOnly);
             }
 
             this.getFieldList().forEach(function (field) {
@@ -1065,12 +1071,40 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
             this.manageAccessDelete();
         },
 
+        addButton: function (o) {
+            var name = o.name;
+            if (!name) return;
+            for (var i in this.buttonList) {
+                if (this.buttonList[i].name == name) {
+                    return;
+                }
+            }
+            this.buttonList.push(o);
+        },
+
+        addDropdownItem: function (o) {
+            if (!o) {
+                this.dropdownItemList.push(false);
+                return;
+            }
+            var name = o.name;
+            if (!name) return;
+            for (var i in this.dropdownItemList) {
+                if (this.dropdownItemList[i].name == name) {
+                    return;
+                }
+            }
+            this.dropdownItemList.push(o);
+        },
+
         enableButtons: function () {
-            this.$el.find(".button-container button").removeAttr('disabled');
+            this.$el.find(".button-container .action").removeAttr('disabled').removeClass('disabled');
+            this.$el.find(".button-container .dropdown-toggle").removeAttr('disabled').removeClass('disabled');
         },
 
         disableButtons: function () {
-            this.$el.find(".button-container button").attr('disabled', 'disabled');
+            this.$el.find(".button-container .action").attr('disabled', 'disabled').addClass('disabled');
+            this.$el.find(".button-container .dropdown-toggle").attr('disabled', 'disabled').addClass('disabled');
         },
 
         removeButton: function (name) {
@@ -1111,11 +1145,7 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                         panel.name = 'panel-' + p.toString();
                     }
                     if (this.dynamicLogic) {
-                        this.dynamicLogic.defs.panels = this.dynamicLogic.defs.panels || {};
-                        this.dynamicLogic.defs.panels[panel.name] = {
-                            visible: simplifiedLayout[p].dynamicLogicVisible
-                        };
-                        this.dynamicLogic.processPanel(panel.name, 'visible');
+                        this.dynamicLogic.addPanelVisibleCondition(panel.name, simplifiedLayout[p].dynamicLogicVisible);
                     }
                 }
 

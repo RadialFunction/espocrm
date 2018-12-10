@@ -35,6 +35,7 @@ use Espo\Core\Utils\Util;
 
 use \Espo\Core\Exceptions\NotFound;
 use \Espo\Core\Exceptions\BadRequest;
+use \Espo\Core\Exceptions\Error;
 
 class LeadCapture extends Record
 {
@@ -58,7 +59,7 @@ class LeadCapture extends Record
 
         $entity->set('exampleRequestMethod', 'POST');
 
-        $requestUrl = $this->getConfig()->getSiteUrl() . '/api/v1/' . $entity->get('apiKey');
+        $requestUrl = $this->getConfig()->getSiteUrl() . '/api/v1/LeadCapture/' . $entity->get('apiKey');
         $entity->set('exampleRequestUrl', $requestUrl);
 
         $fieldManagerUtil = $this->getInjection('fieldManagerUtil');
@@ -116,13 +117,26 @@ class LeadCapture extends Record
 
     public function generateApiKey()
     {
-        return bin2hex(random_bytes(16));
+        return \Espo\Core\Utils\Util::generateApiKey();
+    }
+
+    public function isApiKeyValid($apiKey)
+    {
+        $leadCapture = $this->getEntityManager()->getRepository('LeadCapture')->where([
+            'apiKey' => $apiKey,
+            'isActive' => true
+        ])->findOne();
+
+        if ($leadCapture) return true;
+
+        return false;
     }
 
     public function leadCapture($apiKey, $data)
     {
         $leadCapture = $this->getEntityManager()->getRepository('LeadCapture')->where([
-            'apiKey' => $apiKey
+            'apiKey' => $apiKey,
+            'isActive' => true
         ])->findOne();
 
         if (!$leadCapture) throw new NotFound('Api key is not valid.');
@@ -166,7 +180,7 @@ class LeadCapture extends Record
             return true;
         }
 
-        $this->leadCaptureProceed($leadCapture, $data);
+        return $this->leadCaptureProceed($leadCapture, $data);
     }
 
     protected function getLeadWithPopulatedData(Entity $leadCapture, $data)
@@ -253,7 +267,7 @@ class LeadCapture extends Record
                 }
             } else {
                 $isAlreadyOptedIn = $this->getEntityManager()->getRepository('Lead')->isRelated($lead, 'targetLists', $leadCapture->get('targetListId'));
-                if ($campaign && !$isAlreadyOptedIn) {
+                if (!$isAlreadyOptedIn) {
                     $toRelateLead = true;
                 }
             }
@@ -276,7 +290,9 @@ class LeadCapture extends Record
 
             if ($toRelateLead) {
                 $this->getEntityManager()->getRepository('Lead')->relate($lead, 'targetLists', $leadCapture->get('targetListId'));
-                $campaingService->logOptedIn($campaign->id, null, $lead);
+                if ($campaign) {
+                    $campaingService->logOptedIn($campaign->id, null, $lead);
+                }
             }
         }
 

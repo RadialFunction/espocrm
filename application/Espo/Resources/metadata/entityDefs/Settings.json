@@ -40,6 +40,11 @@
             "options": [0, 1],
             "default": 0
         },
+        "fiscalYearShift": {
+            "type": "enumInt",
+            "default": 0,
+            "view": "views/settings/fields/fiscal-year-shift"
+        },
         "thousandSeparator": {
             "type": "varchar",
             "default": ",",
@@ -55,7 +60,7 @@
         "currencyList": {
             "type": "multiEnum",
             "default": ["USD", "EUR"],
-            "options": ["AED","ANG","ARS","AUD","BAM", "BGN","BHD","BND","BOB","BRL","BWP","CAD","CHF","CLP","CNY","COP","CRC","CZK","DKK","DOP","DZD","EEK","EGP","EUR","FJD","GBP","GNF","HKD","HNL","HRK","HUF","IDR","ILS","INR","JMD","JOD","JPY","KES","KRW","KWD","KYD","KZT","LBP","LKR","LTL","LVL","MAD","MDL","MKD","MUR","MXN","MYR","NAD","NGN","NIO","NOK","NPR","NZD","OMR","PEN","PGK","PHP","PKR","PLN","PYG","QAR","RON","RSD","RUB","SAR","SCR","SEK","SGD","SKK","SLL","SVC","THB","TND","TRY","TTD","TWD","TZS","UAH","UGX","USD","UYU","UZS","VND","YER","ZAR","ZMK"],
+            "options": ["AED","ANG","ARS","AUD","BAM", "BGN","BHD","BND","BOB","BRL","BWP","CAD","CHF","CLP","CNY","COP","CRC","CZK","DKK","DOP","DZD","EEK","EGP","EUR","FJD","GBP","GNF","HKD","HNL","HRK","HUF","IDR","ILS","INR","IRR","JMD","JOD","JPY","KES","KRW","KWD","KYD","KZT","LBP","LKR","LTL","LVL","MAD","MDL","MKD","MUR","MXN","MYR","NAD","NGN","NIO","NOK","NPR","NZD","OMR","PEN","PGK","PHP","PKR","PLN","PYG","QAR","RON","RSD","RUB","SAR","SCR","SEK","SGD","SKK","SLL","SVC","THB","TND","TRY","TTD","TWD","TZS","UAH","UGX","USD","UYU","UZS","VND","YER","ZAR","ZMK"],
             "required": true
         },
         "defaultCurrency": {
@@ -209,6 +214,11 @@
             "type": "bool",
             "tooltip": true
         },
+        "ldapPortalUserLdapAuth": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
         "ldapCreateEspoUser": {
             "type": "bool",
             "default": true,
@@ -258,6 +268,16 @@
             "type": "linkMultiple",
             "tooltip": true,
             "entity": "Team"
+        },
+        "ldapPortalUserPortals": {
+            "type": "linkMultiple",
+            "tooltip": true,
+            "entity": "Portal"
+        },
+        "ldapPortalUserRoles": {
+            "type": "linkMultiple",
+            "tooltip": true,
+            "entity": "PortalRole"
         },
         "exportDisabled": {
             "type": "bool",
@@ -476,6 +496,39 @@
         "outboundEmailBccAddress": {
             "type": "varchar",
             "trim": true
+        },
+        "cleanupDeletedRecords": {
+            "type": "bool",
+            "tooltip": true
+        },
+        "addressCountryList": {
+            "type": "multiEnum"
+        },
+        "jobRunInParallel": {
+            "type": "bool",
+            "tooltip": true
+        },
+        "jobMaxPortion": {
+            "type": "int",
+            "tooltip": true
+        },
+        "jobPoolConcurrencyNumber": {
+            "type": "int",
+            "tooltip": true,
+            "min": 1
+        },
+        "daemonInterval": {
+            "type": "int",
+            "tooltip": true
+        },
+        "daemonMaxProcessNumber": {
+            "type": "int",
+            "tooltip": true,
+            "min": 1
+        },
+        "daemonProcessTimeout": {
+            "type": "int",
+            "tooltip": true
         }
     }
 }

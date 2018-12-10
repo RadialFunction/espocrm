@@ -5,11 +5,19 @@
             {{#each buttonList}}{{button name scope=../../entityType label=label style=style hidden=hidden html=html}}{{/each}}
             {{#if dropdownItemList}}
             <button type="button" class="btn btn-default dropdown-toggle dropdown-item-list-button{{#if dropdownItemListEmpty}} hidden{{/if}}" data-toggle="dropdown">
-                <span class="caret"></span>
+                <span class="fas fa-ellipsis-h"></span>
             </button>
             <ul class="dropdown-menu pull-left">
                 {{#each dropdownItemList}}
-                <li class="{{#if hidden}}hidden{{/if}}"><a href="javascript:" class="action" data-action="{{name}}">{{#if html}}{{{html}}}{{else}}{{translate label scope=../../entityType}}{{/if}}</a></li>
+                {{#if this}}
+                <li class="{{#if hidden}}hidden{{/if}}"><a href="javascript:" class="action" data-action="{{name}}">{{#if html}}{{{html}}}{{else}}{{translate label scope=../../../entityType}}{{/if}}</a></li>
+                {{else}}
+                    {{#unless @first}}
+                    {{#unless @last}}
+                    <li class="divider"></li>
+                    {{/unless}}
+                    {{/unless}}
+                {{/if}}
                 {{/each}}
             </ul>
             {{/if}}
@@ -17,11 +25,11 @@
         {{#if navigateButtonsEnabled}}
         <div class="pull-right">
             <div class="btn-group" role="group">
-                <button type="button" class="btn btn-default action {{#unless previousButtonEnabled}} disabled{{/unless}}" data-action="previous" title="{{translate 'Previous Entry'}}">
-                    <span class="glyphicon glyphicon-chevron-left"></span>
+                <button type="button" class="btn btn-default btn-icon action {{#unless previousButtonEnabled}} disabled{{/unless}}" data-action="previous" title="{{translate 'Previous Entry'}}">
+                    <span class="fas fa-chevron-left"></span>
                 </button>
-                <button type="button" class="btn btn-default action {{#unless nextButtonEnabled}} disabled{{/unless}}" data-action="next" title="{{translate 'Next Entry'}}">
-                    <span class="glyphicon glyphicon-chevron-right"></span>
+                <button type="button" class="btn btn-default btn-icon action {{#unless nextButtonEnabled}} disabled{{/unless}}" data-action="next" title="{{translate 'Next Entry'}}">
+                    <span class="fas fa-chevron-right"></span>
                 </button>
             </div>
         </div>
@@ -32,11 +40,19 @@
         {{#each buttonEditList}}{{button name scope=../../entityType label=label style=style hidden=hidden html=html}}{{/each}}
         {{#if dropdownEditItemList}}
         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-            <span class="caret"></span>
+            <span class="fas fa-ellipsis-h"></span>
         </button>
         <ul class="dropdown-menu pull-left">
             {{#each dropdownEditItemList}}
-            <li class="{{#if hidden}}hidden{{/if}}"><a href="javascript:" class="action" data-action="{{name}}">{{#if html}}{{{html}}}{{else}}{{translate label scope=../../entityType}}{{/if}}</a></li>
+            {{#if this}}
+            <li class="{{#if hidden}}hidden{{/if}}"><a href="javascript:" class="action" data-action="{{name}}">{{#if html}}{{{html}}}{{else}}{{translate label scope=../../../entityType}}{{/if}}</a></li>
+            {{else}}
+                {{#unless @first}}
+                {{#unless @last}}
+                <li class="divider"></li>
+                {{/unless}}
+                {{/unless}}
+            {{/if}}
             {{/each}}
         </ul>
         {{/if}}

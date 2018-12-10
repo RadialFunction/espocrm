@@ -81,8 +81,12 @@ class Pdf extends \Espo\Core\Services\Base
     protected function printEntity(Entity $entity, Entity $template, Htmlizer $htmlizer, \Espo\Core\Pdf\Tcpdf $pdf)
     {
         $fontFace = $this->getConfig()->get('pdfFontFace', $this->fontFace);
+        if ($template->get('fontFace')) {
+            $fontFace = $template->get('fontFace');
+        }
 
         $pdf->setFont($fontFace, '', $this->fontSize, '', true);
+
         $pdf->setPrintHeader(false);
 
         $pdf->setAutoPageBreak(true, $template->get('bottomMargin'));
@@ -223,7 +227,8 @@ class Pdf extends \Espo\Core\Services\Base
             'data' => [
                 'id' => $attachment->id
             ],
-            'executeTime' => (new \DateTime())->modify('+' . $this->removeMassFilePeriod)->format('Y-m-d H:i:s')
+            'executeTime' => (new \DateTime())->modify('+' . $this->removeMassFilePeriod)->format('Y-m-d H:i:s'),
+            'queue' => 'q1'
         ]);
         $this->getEntityManager()->saveEntity($job);
 

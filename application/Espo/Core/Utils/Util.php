@@ -555,6 +555,19 @@ class Util
         return uniqid() . substr(md5(rand()), 0, 4);
     }
 
+    public static function generateApiKey()
+    {
+        if (!function_exists('random_bytes')) {
+            return self::generateId();
+        }
+        return bin2hex(random_bytes(16));
+    }
+
+    public static function generateKey()
+    {
+        return md5(uniqid(rand(), true));
+    }
+
     public static function sanitizeFileName($fileName)
     {
         return preg_replace("/([^\w\s\d\-_~,;:\[\]\(\).])/u", '_', $fileName);
@@ -618,9 +631,79 @@ class Util
      *
      * @return boolean
      */
-    static public function arrayKeysExists(array $keys, array $array)
+    public static function arrayKeysExists(array $keys, array $array)
     {
        return !array_diff_key(array_flip($keys), $array);
     }
-}
 
+    public static function convertToByte($value)
+    {
+        $value = trim($value);
+        $last = strtoupper(substr($value, -1));
+
+        switch ( $last )
+        {
+            case 'G':
+            $value = (int) $value * 1024;
+            case 'M':
+            $value = (int) $value * 1024;
+            case 'K':
+            $value = (int) $value * 1024;
+        }
+
+        return $value;
+    }
+
+    public static function areValuesEqual($v1, $v2, $isUnordered = false)
+    {
+        if (is_array($v1) && is_array($v2)) {
+            if ($isUnordered) {
+                sort($v1);
+                sort($v2);
+            }
+            if ($v1 != $v2) {
+                return false;
+            }
+            foreach ($v1 as $i => $itemValue) {
+                if (is_object($v1[$i]) && is_object($v2[$i])) {
+                    if (!self::areValuesEqual($v1[$i], $v2[$i])) {
+                        return false;
+                    }
+                    continue;
+                }
+                if ($v1[$i] !== $v2[$i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        if (is_object($v1) && is_object($v2)) {
+            if ($v1 != $v2) {
+                return false;
+            }
+            $a1 = get_object_vars($v1);
+            $a2 = get_object_vars($v2);
+            foreach ($v1 as $key => $itemValue) {
+                if (is_object($a1[$key]) && is_object($a2[$key])) {
+                    if (!self::areValuesEqual($a1[$key], $a2[$key])) {
+                        return false;
+                    }
+                    continue;
+                }
+                if (is_array($a1[$key]) && is_array($a2[$key])) {
+                    if (!self::areValuesEqual($a1[$key], $a2[$key])) {
+                        return false;
+                    }
+                    continue;
+                }
+                if ($a1[$key] !== $a2[$key]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        return $v1 === $v2;
+    }
+}

@@ -71,17 +71,22 @@ Espo.define('views/fields/phone', 'views/fields/varchar', function (Dep) {
             if (phoneNumberData) {
                 phoneNumberData = Espo.Utils.cloneDeep(phoneNumberData);
                 phoneNumberData.forEach(function (item) {
-                    item.erased = item.phoneNumber.indexOf(this.erasedPlaceholder) === 0
+                    item.erased = item.phoneNumber.indexOf(this.erasedPlaceholder) === 0;
+                    if (!item.erased) {
+                        item.valueForLink = item.phoneNumber.replace(/ /g, '');
+                    }
                 }, this);
             }
 
             if ((!phoneNumberData || phoneNumberData.length === 0) && this.model.get(this.name)) {
-                 phoneNumberData = [{
+                var o = {
                     phoneNumber: this.model.get(this.name),
-                    primary: true,
-                    primary: true,
-                    type: this.defaultType
-                }];
+                    primary: true
+                };
+                if (this.mode === 'edit' && this.model.isNew()) {
+                    o.type = this.defaultType;
+                }
+                phoneNumberData = [o];
             }
 
             var data = _.extend({
@@ -91,8 +96,12 @@ Espo.define('views/fields/phone', 'views/fields/varchar', function (Dep) {
 
             if (this.mode === 'detail' || this.mode === 'list') {
                 if (this.model.get(this.name)) {
-                    data.isErased = this.model.get(this.name).indexOf(this.erasedPlaceholder) === 0
+                    data.isErased = this.model.get(this.name).indexOf(this.erasedPlaceholder) === 0;
+                    if (!data.isErased) {
+                        data.valueForLink = this.model.get(this.name).replace(/ /g, '');
+                    }
                 }
+                data.valueIsSet = this.model.has(this.name);
             }
 
             return data;
@@ -124,7 +133,7 @@ Espo.define('views/fields/phone', 'views/fields/varchar', function (Dep) {
 
             'click [data-action="removePhoneNumber"]': function (e) {
                 var $block = $(e.currentTarget).closest('div.phone-number-block');
-                if ($block.parent().children().size() == 1) {
+                if ($block.parent().children().length == 1) {
                     $block.find('input.phone-number').val('');
                 } else {
                     this.removePhoneNumberBlock($block);
@@ -137,7 +146,7 @@ Espo.define('views/fields/phone', 'views/fields/varchar', function (Dep) {
                 var $block = $input.closest('div.phone-number-block');
 
                 if ($input.val() == '') {
-                    if ($block.parent().children().size() == 1) {
+                    if ($block.parent().children().length == 1) {
                         $block.find('input.phone-number').val('');
                     } else {
                         this.removePhoneNumberBlock($block);
@@ -205,17 +214,17 @@ Espo.define('views/fields/phone', 'views/fields/varchar', function (Dep) {
                 }
             });
 
-            if (c == $input.size()) {
-                this.$el.find('[data-action="addPhoneNumber"]').removeClass('disabled');
+            if (c == $input.length) {
+                this.$el.find('[data-action="addPhoneNumber"]').removeClass('disabled').removeAttr('disabled');
             } else {
-                this.$el.find('[data-action="addPhoneNumber"]').addClass('disabled');
+                this.$el.find('[data-action="addPhoneNumber"]').addClass('disabled').attr('disabled', 'disabled');
             }
         },
 
         manageButtonsVisibility: function () {
             var $primary = this.$el.find('button[data-property-type="primary"]');
             var $remove = this.$el.find('button[data-action="removePhoneNumber"]');
-            if ($primary.size() > 1) {
+            if ($primary.length > 1) {
                 $primary.removeClass('hidden');
                 $remove.removeClass('hidden');
             } else {
@@ -244,7 +253,7 @@ Espo.define('views/fields/phone', 'views/fields/varchar', function (Dep) {
 
             var $list = this.$el.find('div.phone-number-block');
 
-            if ($list.size()) {
+            if ($list.length) {
                 $list.each(function (i, d) {
                     var row = {};
                     var $d = $(d);

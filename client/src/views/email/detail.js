@@ -55,27 +55,27 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
                     style: 'danger'
                 }, true);
 
+                this.addMenuItem('dropdown', false);
 
                 if (status == 'Archived' || status == 'Recieved') {
                     if (!this.model.get('parentId')) {
-                        this.menu.dropdown.push({
+                        this.addMenuItem('dropdown', {
                             label: 'Create Lead',
                             action: 'createLead',
                             acl: 'edit',
                             aclScope: 'Lead'
                         });
-                        if (this.getConfig().get('b2cMode')) {
-                            this.menu.dropdown.push({
-                                label: 'Create Contact',
-                                action: 'createContact',
-                                acl: 'edit',
-                                aclScope: 'Contact'
-                            });
-                        }
+
+                        this.addMenuItem('dropdown', {
+                            label: 'Create Contact',
+                            action: 'createContact',
+                            acl: 'edit',
+                            aclScope: 'Contact'
+                        });
                     }
                 }
 
-                this.menu.dropdown.push({
+                this.addMenuItem('dropdown', {
                     label: 'Create Task',
                     action: 'createTask',
                     acl: 'edit',
@@ -83,7 +83,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
                 });
 
                 if (this.model.get('parentType') !== 'Case' || !this.model.get('parentId')) {
-                    this.menu.dropdown.push({
+                    this.addMenuItem('dropdown', {
                         label: 'Create Case',
                         action: 'createCase',
                         acl: 'edit',
@@ -135,7 +135,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
             }
             attributes.emailId = this.model.id;
 
-            var viewName = this.getMetadata().get('clientDefs.Lead.modalViews.detail') || 'views/modals/edit';
+            var viewName = this.getMetadata().get('clientDefs.Lead.modalViews.edit') || 'views/modals/edit';
 
             this.notify('Loading...');
             this.createView('quickCreate', viewName, {
@@ -175,7 +175,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
             attributes.name = this.model.get('name');
             attributes.description = this.model.get('bodyPlain') || '';
 
-            var viewName = this.getMetadata().get('clientDefs.Case.modalViews.detail') || 'views/modals/edit';
+            var viewName = this.getMetadata().get('clientDefs.Case.modalViews.edit') || 'views/modals/edit';
 
             Espo.Ui.notify(this.translate('loading', 'messsages'));
 
@@ -218,7 +218,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
 
             attributes.name = this.translate('Email', 'scopeNames') + ': ' + this.model.get('name');
 
-            var viewName = this.getMetadata().get('clientDefs.Task.modalViews.detail') || 'views/modals/edit';
+            var viewName = this.getMetadata().get('clientDefs.Task.modalViews.edit') || 'views/modals/edit';
 
             this.notify('Loading...');
             this.createView('quickCreate', viewName, {
@@ -267,7 +267,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
             }
             attributes.emailId = this.model.id;
 
-            var viewName = this.getMetadata().get('clientDefs.Contact.modalViews.detail') || 'views/modals/edit';
+            var viewName = this.getMetadata().get('clientDefs.Contact.modalViews.edit') || 'views/modals/edit';
 
             this.notify('Loading...');
             this.createView('quickCreate', viewName, {

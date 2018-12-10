@@ -151,7 +151,7 @@ Espo.define('views/fields/link-multiple-with-role', 'views/fields/link-multiple'
 
             var nameHtml = '<div>' + this.getHelper().stripTags(name) + '&nbsp;' + '</div>';
 
-            var removeHtml = '<a href="javascript:" class="pull-right" data-id="' + id + '" data-action="clearLink"><span class="glyphicon glyphicon-remove"></a>';
+            var removeHtml = '<a href="javascript:" class="pull-right" data-id="' + id + '" data-action="clearLink"><span class="fas fa-times"></a>';
 
             var $role;
 
@@ -182,7 +182,7 @@ Espo.define('views/fields/link-multiple-with-role', 'views/fields/link-multiple'
             if (this.mode == 'edit') {
                 if ($role) {
                     var fetch = function ($target) {
-                        if (!$target || !$target.size()) return;
+                        if (!$target || !$target.length) return;
 
                         var value = $target.val().toString().trim();
                         var id = $target.data('id');

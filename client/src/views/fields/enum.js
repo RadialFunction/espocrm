@@ -50,6 +50,11 @@ Espo.define('views/fields/enum', ['views/fields/base', 'lib!Selectize'], functio
             var data = Dep.prototype.data.call(this);
             data.translatedOptions = this.translatedOptions;
             var value = this.model.get(this.name);
+
+            if (this.isReadMode() && this.styleMap && (value || value === '')) {
+                data.style = this.styleMap[value] || 'default';
+            }
+
             if (
                 value !== null
                 &&
@@ -69,6 +74,8 @@ Espo.define('views/fields/enum', ['views/fields/base', 'lib!Selectize'], functio
                     this.params.options = this.model[methodName].call(this.model);
                 }
             }
+
+            this.styleMap = this.model.getFieldParam(this.name, 'style') || {};
 
             this.setupOptions();
 
@@ -195,7 +202,7 @@ Espo.define('views/fields/enum', ['views/fields/base', 'lib!Selectize'], functio
 
             if (this.mode == 'search') {
 
-                var $element = this.$element = this.$el.find('[name="' + this.name + '"]');
+                var $element = this.$element = this.$el.find('.main-element');
 
                 var type = this.$el.find('select.search-type').val();
                 this.handleSearchType(type);
@@ -252,7 +259,7 @@ Espo.define('views/fields/enum', ['views/fields/base', 'lib!Selectize'], functio
         },
 
         fetch: function () {
-            var value = this.$el.find('[name="' + this.name + '"]').val();
+            var value = this.$element.val();
             var data = {};
             data[this.name] = value;
             return data;
@@ -263,7 +270,7 @@ Espo.define('views/fields/enum', ['views/fields/base', 'lib!Selectize'], functio
         },
 
         fetchSearch: function () {
-            var type = this.$el.find('[name="'+this.name+'-type"]').val();
+            var type = this.fetchSearchType();
 
             var list = this.$element.val().split(':,:');
             if (list.length === 1 && list[0] == '') {
@@ -363,4 +370,3 @@ Espo.define('views/fields/enum', ['views/fields/base', 'lib!Selectize'], functio
 
     });
 });
-

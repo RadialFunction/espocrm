@@ -78,7 +78,14 @@ Espo.define('views/record/list-tree', 'views/record/list', function (Dep) {
 
             if (this.level == 0 && this.options.hasExpandedToggler) {
                 data.hasExpandedToggler = true;
+            }
+
+            if (this.level == 0) {
                 data.isExpanded = this.isExpanded;
+            }
+
+            if (data.hasExpandedToggler || this.showEditLink) {
+                data.showRootMenu = true;
             }
 
             return data;
@@ -268,4 +275,3 @@ Espo.define('views/record/list-tree', 'views/record/list', function (Dep) {
 
     });
 });
-

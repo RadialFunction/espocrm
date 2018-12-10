@@ -52,6 +52,10 @@ class EntityManager
 
     private $reservedWordList = ['__halt_compiler', 'abstract', 'and', 'array', 'as', 'break', 'callable', 'case', 'catch', 'class', 'clone', 'const', 'continue', 'declare', 'default', 'die', 'do', 'echo', 'else', 'elseif', 'empty', 'enddeclare', 'endfor', 'endforeach', 'endif', 'endswitch', 'endwhile', 'eval', 'exit', 'extends', 'final', 'for', 'foreach', 'function', 'global', 'goto', 'if', 'implements', 'include', 'include_once', 'instanceof', 'insteadof', 'interface', 'isset', 'list', 'namespace', 'new', 'or', 'print', 'private', 'protected', 'public', 'require', 'require_once', 'return', 'static', 'switch', 'throw', 'trait', 'try', 'unset', 'use', 'var', 'while', 'xor', 'common'];
 
+    private $linkForbiddenNameList = ['posts', 'stream', 'subscription'];
+
+    private $forbiddenEntityTypeNameList = ['PortalUser', 'ApiUser', 'Timeline', 'About', 'Admin'];
+
     public function __construct(Metadata $metadata, Language $language, File\Manager $fileManager, Config $config, Container $container = null)
     {
         $this->metadata = $metadata;
@@ -181,12 +185,20 @@ class EntityManager
             throw new Conflict('Entity \''.$name.'\' already exists.');
         }
 
+        if ($this->getMetadata()->get(['clientDefs.', $name])) {
+            throw new Conflict('Entity \''.$name.'\' already exists.');
+        }
+
         if ($this->checkControllerExists($name)) {
             throw new Conflict('Entity name \''.$name.'\' is not allowed.');
         }
 
         $serviceFactory = $this->getServiceFactory();
         if ($serviceFactory && $serviceFactory->checKExists($name)) {
+            throw new Conflict('Entity name \''.$name.'\' is not allowed.');
+        }
+
+        if (in_array($name, $this->forbiddenEntityTypeNameList)) {
             throw new Conflict('Entity name \''.$name.'\' is not allowed.');
         }
 
@@ -411,12 +423,15 @@ class EntityManager
         }
 
         if (isset($data['sortBy'])) {
-            $entityDefsData = array(
-                'collection' => array(
-                    'sortBy' => $data['sortBy'],
-                    'asc' => !empty($data['asc'])
-                )
-            );
+            $entityDefsData = [
+                'collection' => [
+                    'orderBy' => $data['sortBy']
+                ]
+            ];
+            if (isset($data['sortDirection'])) {
+                $entityDefsData['collection']['order'] = $data['sortDirection'];
+            }
+
             $this->getMetadata()->set('entityDefs', $name, $entityDefsData);
         }
 
@@ -582,6 +597,9 @@ class EntityManager
             } else {
                 $relationName = lcfirst($entity) . $entityForeign;
             }
+            if (strlen($relationName) > 100) {
+                throw new Error('Relation name should not be longer than 100.');
+            }
             if ($this->getMetadata()->get(['scopes', ucfirst($relationName)])) {
                 throw new Conflict("Entity with the same name '{$relationName}' exists.");
             }
@@ -594,12 +612,20 @@ class EntityManager
             throw new BadRequest();
         }
 
-        if (strlen($link) > 255 || strlen($linkForeign) > 255) {
-            throw new Error('Link name should not be longer than 255.');
+        if (strlen($link) > 100 || strlen($linkForeign) > 100) {
+            throw new Error('Link name should not be longer than 100.');
         }
 
         if (is_numeric($link[0]) || is_numeric($linkForeign[0])) {
             throw new Error('Bad link name.');
+        }
+
+        if (in_array($link, $this->linkForbiddenNameList)) {
+            throw new Conflict("Link name '{$link}' is not allowed.");
+        }
+
+        if (in_array($linkForeign, $this->linkForbiddenNameList)) {
+            throw new Conflict("Link name '{$linkForeign}' is not allowed.");
         }
 
         $linkMultipleField = false;
@@ -1047,6 +1073,8 @@ class EntityManager
         $this->getMetadata()->delete('entityDefs', $scope, [
             'collection.sortBy',
             'collection.asc',
+            'collection.orderBy',
+            'collection.order',
             'collection.textFilterFields'
         ]);
         $this->getMetadata()->save();

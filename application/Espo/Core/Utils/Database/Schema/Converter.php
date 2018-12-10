@@ -306,7 +306,7 @@ class Converter
 
         $table = $this->getSchema()->createTable($tableName);
         $table->addColumn('id', 'int', $this->getDbFieldParams(array(
-            'type' => 'int',
+            'type' => 'id',
             'len' => $this->defaultLength['int'],
             'autoincrement' => true,
         )));
@@ -373,6 +373,13 @@ class Converter
             }
         }
 
+        $databaseParams = $this->getConfig()->get('database');
+        if (!isset($databaseParams['charset']) || $databaseParams['charset'] == 'utf8mb4') {
+            $dbFieldParams['platformOptions'] = array(
+                'collation' => 'utf8mb4_unicode_ci',
+            );
+        }
+
         switch ($fieldParams['type']) {
             case 'id':
             case 'foreignId':
@@ -398,9 +405,10 @@ class Converter
                 break;
         }
 
-        if (isset($fieldParams['autoincrement']) && $fieldParams['autoincrement']) {
+        if ($fieldParams['type'] != 'id' && isset($fieldParams['autoincrement']) && $fieldParams['autoincrement']) {
             $dbFieldParams['unique'] = true;
             $dbFieldParams['notnull'] = true;
+            $dbFieldParams['unsigned'] = true;
         }
 
         if (isset($fieldParams['utf8mb3']) && $fieldParams['utf8mb3']) {

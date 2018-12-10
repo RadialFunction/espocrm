@@ -69,7 +69,6 @@ class Email extends Record
         'fromString',
         'fromEmailAddressId',
         'fromEmailAddressName',
-        'fromName',
         'parentId',
         'parentType',
         'isHtml',
@@ -450,18 +449,7 @@ class Email extends Record
         ";
         $pdo->query($sql);
 
-        $sql = "
-            UPDATE notification SET `read` = 1
-            WHERE
-                `deleted` = 0 AND
-                `type` = 'EmailReceived' AND
-                `related_type` = 'Email' AND
-                `related_id` = " . $pdo->quote($id) ." AND
-                `read` = 0 AND
-                `user_id` = " . $pdo->quote($userId) . "
-        ";
-
-        $pdo->query($sql);
+        $this->markNotificationAsRead($id, $userId);
 
         return true;
     }
@@ -531,7 +519,27 @@ class Email extends Record
                 email_id = " . $pdo->quote($id) . "
         ";
         $pdo->query($sql);
+
+        $this->markNotificationAsRead($id, $userId);
+
         return true;
+    }
+
+    public function markNotificationAsRead($id, $userId)
+    {
+        $pdo = $this->getEntityManager()->getPDO();
+
+        $sql = "
+            UPDATE notification SET `read` = 1
+            WHERE
+                `deleted` = 0 AND
+                `type` = 'EmailReceived' AND
+                `related_type` = 'Email' AND
+                `related_id` = " . $pdo->quote($id) ." AND
+                `read` = 0 AND
+                `user_id` = " . $pdo->quote($userId) . "
+        ";
+        $pdo->query($sql);
     }
 
     public function retrieveFromTrash($id, $userId = null)
@@ -582,6 +590,21 @@ class Email extends Record
         return $fromName;
     }
 
+    static public function parseFromAddress($string)
+    {
+        $fromAddress = '';
+        if ($string) {
+            if (stripos($string, '<') !== false) {
+                if (preg_match('/<(.*)>/', $string, $matches)) {
+                    $fromAddress = trim($matches[1]);
+                }
+            } else {
+                $fromAddress = $string;
+            }
+        }
+        return $fromAddress;
+    }
+
     public function loadAdditionalFieldsForList(Entity $entity)
     {
         parent::loadAdditionalFieldsForList($entity);
@@ -616,7 +639,7 @@ class Email extends Record
                 if ($person) {
                     $entity->set('personStringData', $person->get('name'));
                 } else {
-                    $fromName = self::parseFromName($entity->get('fromString'));
+                    $fromName = $entity->get('fromName');
                     if (!empty($fromName)) {
                         $entity->set('personStringData', $fromName);
                     } else {
@@ -830,6 +853,11 @@ class Email extends Record
         }
 
         return $data;
+    }
+
+    public function isPermittedAssignedUser(Entity $entity)
+    {
+        return true;
     }
 
     public function isPermittedAssignedUsers(Entity $entity)

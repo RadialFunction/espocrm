@@ -24,6 +24,7 @@
         "Attachment": "Attachment",
         "EmailFolder": "Email Folder",
         "PortalUser": "Portal User",
+        "ApiUser": "API User",
         "ScheduledJobLogRecord": "Scheduled Job Log Record",
         "PasswordChangeRequest": "Password Change Request",
         "ActionHistoryRecord": "Action History Record",
@@ -46,7 +47,8 @@
         "AuthLogRecord": "Auth Log Record",
         "AuthFailLogRecord": "Auth Fail Log Record",
         "LeadCapture": "Lead Capture Entry Point",
-        "LeadCaptureLogRecord": "Lead Capture Log Record"
+        "LeadCaptureLogRecord": "Lead Capture Log Record",
+        "ArrayValue": "Array Value"
     },
     "scopeNamesPlural": {
         "Email": "Emails",
@@ -64,7 +66,7 @@
         "Dashboard": "Dashboard",
         "InboundEmail": "Group Email Accounts",
         "Stream": "Stream",
-        "Import": "Import Results",
+        "Import": "Import",
         "Template": "Templates",
         "Job": "Jobs",
         "EmailFilter": "Email Filters",
@@ -73,6 +75,7 @@
         "Attachment": "Attachments",
         "EmailFolder": "Email Folders",
         "PortalUser": "Portal Users",
+        "ApiUser": "API Users",
         "ScheduledJobLogRecord": "Scheduled Job Log Records",
         "PasswordChangeRequest": "Password Change Requests",
         "ActionHistoryRecord": "Action History",
@@ -82,7 +85,8 @@
         "AuthLogRecord": "Auth Log",
         "AuthFailLogRecord": "Auth Fail Log",
         "LeadCapture": "Lead Capture",
-        "LeadCaptureLogRecord": "Lead Capture Log"
+        "LeadCaptureLogRecord": "Lead Capture Log",
+        "ArrayValue": "Array Values"
     },
     "labels": {
         "Misc": "Misc",
@@ -236,7 +240,8 @@
         "Convert to": "Convert to",
         "View Personal Data": "View Personal Data",
         "Personal Data": "Personal Data",
-        "Erase": "Erase"
+        "Erase": "Erase",
+        "Move Over": "Move Over"
     },
     "messages": {
         "pleaseWait": "Please wait...",
@@ -571,7 +576,11 @@
             "ever": "Ever",
             "isEmpty": "Is Empty",
             "olderThanXDays": "Older Than X Days",
-            "afterXDays": "After X Days"
+            "afterXDays": "After X Days",
+            "currentFiscalYear": "Current Fiscal Year",
+            "lastFiscalYear": "Last Fiscal Year",
+            "currentFiscalQuarter": "Current Fiscal Quarter",
+            "lastFiscalQuarter": "Last Fiscal Quarter"
         },
         "searchRanges": {
             "is": "Is",

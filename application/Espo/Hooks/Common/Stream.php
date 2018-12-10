@@ -178,7 +178,7 @@ class Stream extends \Espo\Core\Hooks\Base
         return $userIdList;
     }
 
-    public function afterSave(Entity $entity, array $options = array())
+    public function afterSave(Entity $entity, array $options = [])
     {
         $entityType = $entity->getEntityType();
 
@@ -202,6 +202,8 @@ class Stream extends \Espo\Core\Hooks\Base
 
                 if (
                     !$this->getUser()->isSystem()
+                    &&
+                    !$this->getUser()->isApi()
                     &&
                     $createdById
                     &&
@@ -256,15 +258,16 @@ class Stream extends \Espo\Core\Hooks\Base
 
                 if (!empty($autofollowUserIdList)) {
                     $job = $this->getEntityManager()->getEntity('Job');
-                    $job->set(array(
+                    $job->set([
                         'serviceName' => 'Stream',
                         'methodName' => 'afterRecordCreatedJob',
-                        'data' => array(
+                        'data' => [
                             'userIdList' => $autofollowUserIdList,
                             'entityType' => $entity->getEntityType(),
                             'entityId' => $entity->id
-                        )
-                    ));
+                        ],
+                        'queue' => 'q1'
+                    ]);
                     $this->getEntityManager()->saveEntity($job);
                 }
             } else {
@@ -335,14 +338,15 @@ class Stream extends \Espo\Core\Hooks\Base
                     )
                 ) {
                     $job = $this->getEntityManager()->getEntity('Job');
-                    $job->set(array(
+                    $job->set([
                         'serviceName' => 'Stream',
                         'methodName' => 'controlFollowersJob',
-                        'data' => array(
+                        'data' => [
                             'entityType' => $entity->getEntityType(),
                             'entityId' => $entity->id
-                        )
-                    ));
+                        ],
+                        'queue' => 'q1'
+                    ]);
                     $this->getEntityManager()->saveEntity($job);
                 }
             }

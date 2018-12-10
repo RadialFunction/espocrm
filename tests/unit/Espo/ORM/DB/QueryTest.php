@@ -224,6 +224,67 @@ class QueryTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($expectedSql, $sql);
     }
 
+    public function testJoinConditions1()
+    {
+        $sql = $this->query->createSelectQuery('Post', [
+            'select' => ['id', 'name'],
+            'leftJoins' => [['notes', 'notesLeft', ['notesLeft.name!=' => null]]]
+        ]);
+
+        $expectedSql =
+            "SELECT post.id AS `id`, post.name AS `name` FROM `post` " .
+            "LEFT JOIN `note` AS `notesLeft` ON post.id = notesLeft.parent_id AND notesLeft.parent_type = 'Post' AND notesLeft.deleted = '0' AND notesLeft.name IS NOT NULL " .
+            "WHERE post.deleted = '0'";
+
+        $this->assertEquals($expectedSql, $sql);
+    }
+
+    public function testJoinConditions2()
+    {
+        $sql = $this->query->createSelectQuery('Post', [
+            'select' => ['id', 'name'],
+            'leftJoins' => [['notes', 'notesLeft', ['notesLeft.name=:' => 'post.name']]]
+        ]);
+
+        $expectedSql =
+            "SELECT post.id AS `id`, post.name AS `name` FROM `post` " .
+            "LEFT JOIN `note` AS `notesLeft` ON post.id = notesLeft.parent_id AND notesLeft.parent_type = 'Post' AND notesLeft.deleted = '0' AND notesLeft.name = post.name " .
+            "WHERE post.deleted = '0'";
+
+        $this->assertEquals($expectedSql, $sql);
+    }
+
+    public function testJoinTable()
+    {
+        $sql = $this->query->createSelectQuery('Post', [
+            'select' => ['id', 'name'],
+            'leftJoins' => [['NoteTable', 'note', ['note.parentId=:' => 'post.id', 'note.parentType' => 'Post']]]
+        ]);
+
+        $expectedSql =
+            "SELECT post.id AS `id`, post.name AS `name` FROM `post` " .
+            "LEFT JOIN `note_table` AS `note` ON note.parent_id = post.id AND note.parent_type = 'Post' " .
+            "WHERE post.deleted = '0'";
+
+        $this->assertEquals($expectedSql, $sql);
+    }
+
+    public function testWhereNotValue()
+    {
+        $sql = $this->query->createSelectQuery('Post', [
+            'select' => ['id', 'name'],
+            'whereClause' => [
+                'name!=:' => 'post.id'
+            ]
+        ]);
+
+        $expectedSql =
+            "SELECT post.id AS `id`, post.name AS `name` FROM `post` " .
+            "WHERE post.name <> post.id AND post.deleted = '0'";
+
+        $this->assertEquals($expectedSql, $sql);
+    }
+
     public function testSelectWithSubquery()
     {
         $sql = $this->query->createSelectQuery('Post', array(
@@ -274,6 +335,42 @@ class QueryTest extends \PHPUnit\Framework\TestCase
         ));
 
         $expectedSql = "SELECT post.id AS `id`, post.name AS `name` FROM `post` WHERE post.id NOT IN (SELECT post.id AS `id` FROM `post` WHERE post.name = 'test' AND post.created_by_id = '1' AND post.deleted = '0') AND post.deleted = '0'";
+        $this->assertEquals($expectedSql, $sql);
+    }
+
+    public function testGroupBy()
+    {
+        $sql = $this->query->createSelectQuery('Comment', [
+            'select' => ['COUNT:id', 'QUARTER:comment.createdAt'],
+            'groupBy' => ['QUARTER:comment.createdAt']
+        ]);
+        $expectedSql =
+            "SELECT COUNT(comment.id) AS `COUNT:id`, CONCAT(YEAR(comment.created_at), '_', QUARTER(comment.created_at)) AS `QUARTER:comment.createdAt` FROM `comment` " .
+            "WHERE comment.deleted = '0' " .
+            "GROUP BY CONCAT(YEAR(comment.created_at), '_', QUARTER(comment.created_at))";
+        $this->assertEquals($expectedSql, $sql);
+
+
+        $sql = $this->query->createSelectQuery('Comment', [
+            'select' => ['COUNT:id', 'YEAR_5:comment.createdAt'],
+            'groupBy' => ['YEAR_5:comment.createdAt']
+        ]);
+        $expectedSql =
+            "SELECT COUNT(comment.id) AS `COUNT:id`, CASE WHEN MONTH(comment.created_at) >= 6 THEN YEAR(comment.created_at) ELSE YEAR(comment.created_at) - 1 END AS `YEAR_5:comment.createdAt` FROM `comment` " .
+            "WHERE comment.deleted = '0' " .
+            "GROUP BY CASE WHEN MONTH(comment.created_at) >= 6 THEN YEAR(comment.created_at) ELSE YEAR(comment.created_at) - 1 END";
+        $this->assertEquals($expectedSql, $sql);
+
+
+        $sql = $this->query->createSelectQuery('Comment', [
+            'select' => ['COUNT:id', 'QUARTER_4:comment.createdAt'],
+            'groupBy' => ['QUARTER_4:comment.createdAt']
+        ]);
+
+        $expectedSql =
+            "SELECT COUNT(comment.id) AS `COUNT:id`, CASE WHEN MONTH(comment.created_at) >= 5 THEN CONCAT(YEAR(comment.created_at), '_', FLOOR((MONTH(comment.created_at) - 5) / 3) + 1) ELSE CONCAT(YEAR(comment.created_at) - 1, '_', CEIL((MONTH(comment.created_at) + 7) / 3)) END AS `QUARTER_4:comment.createdAt` FROM `comment` " .
+            "WHERE comment.deleted = '0' " .
+            "GROUP BY CASE WHEN MONTH(comment.created_at) >= 5 THEN CONCAT(YEAR(comment.created_at), '_', FLOOR((MONTH(comment.created_at) - 5) / 3) + 1) ELSE CONCAT(YEAR(comment.created_at) - 1, '_', CEIL((MONTH(comment.created_at) + 7) / 3)) END";
         $this->assertEquals($expectedSql, $sql);
     }
 

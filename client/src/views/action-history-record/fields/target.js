@@ -30,7 +30,9 @@ Espo.define('views/action-history-record/fields/target', 'views/fields/link-pare
 
     return Dep.extend({
 
-        ignoreScopeList: ['Preferences', 'ExternalAccount', 'Notification', 'Note'],
+        displayScopeColorInListMode: true,
+
+        ignoreScopeList: ['Preferences', 'ExternalAccount', 'Notification', 'Note', 'ArrayValue'],
 
         setup: function () {
             Dep.prototype.setup.call(this);
@@ -50,6 +52,7 @@ Espo.define('views/action-history-record/fields/target', 'views/fields/link-pare
 
             this.getLanguage().sortEntityList(this.foreignScopeList);
 
+            this.foreignScope = this.model.get(this.typeName) || this.foreignScopeList[0];
         }
 
     });

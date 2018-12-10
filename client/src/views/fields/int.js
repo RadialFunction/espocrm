@@ -109,7 +109,7 @@ Espo.define('views/fields/int', 'views/fields/base', function (Dep) {
 
         handleSearchType: function (type) {
             var $additionalInput = this.$el.find('input.additional');
-            var $input = this.$el.find('input[name="'+this.name+'"]');
+            var $input = this.$el.find('input[data-name="'+this.name+'"]');
 
             if (type === 'between') {
                 $additionalInput.removeClass('hidden');
@@ -123,9 +123,30 @@ Espo.define('views/fields/int', 'views/fields/base', function (Dep) {
             }
         },
 
+        getMaxValue: function () {
+            var maxValue = this.model.getFieldParam(this.name, 'max') || null;
+
+            if ('max' in this.params) {
+                maxValue = this.params.max;
+            }
+
+            return maxValue;
+        },
+
+        getMinValue: function () {
+            var minValue = this.model.getFieldParam(this.name, 'min') || null;
+
+            if ('min' in this.params) {
+                minValue = this.params.min;
+            }
+
+            return minValue;
+        },
+
         setupMaxLength: function () {
-            var maxValue = this.model.getFieldParam(this.name, 'max');
-            if (maxValue) {
+            var maxValue = this.getMaxValue();
+
+            if (typeof max !== 'undefined' && max !== null) {
                 maxValue = this.formatNumber(maxValue);
                 this.params.maxLength = maxValue.toString().length;
             }
@@ -147,8 +168,8 @@ Espo.define('views/fields/int', 'views/fields/base', function (Dep) {
                 return false;
             }
 
-            var minValue = this.model.getFieldParam(this.name, 'min');
-            var maxValue = this.model.getFieldParam(this.name, 'max');
+            var minValue = this.getMinValue();
+            var maxValue = this.getMaxValue();
 
             if (minValue !== null && maxValue !== null) {
                 if (value < minValue || value > maxValue ) {
@@ -202,7 +223,7 @@ Espo.define('views/fields/int', 'views/fields/base', function (Dep) {
         },
 
         fetch: function () {
-            var value = this.$el.find('[name="'+this.name+'"]').val();
+            var value = this.$element.val();
             value = this.parse(value);
             var data = {};
             data[this.name] = value;
@@ -211,7 +232,9 @@ Espo.define('views/fields/int', 'views/fields/base', function (Dep) {
 
         fetchSearch: function () {
             var value = this.parse(this.$element.val());
-            var type = this.$el.find('[name="'+this.name+'-type"]').val();
+
+            var type = this.fetchSearchType();
+
             var data;
 
             if (isNaN(value)) {
@@ -219,7 +242,7 @@ Espo.define('views/fields/int', 'views/fields/base', function (Dep) {
             }
 
             if (type === 'between') {
-                var valueTo = this.parse(this.$el.find('[name="' + this.name + '-additional"]').val());
+                var valueTo = this.parse(this.$el.find('input.additional').val());
                 if (isNaN(valueTo)) {
                     return false;
                 }
@@ -255,4 +278,3 @@ Espo.define('views/fields/int', 'views/fields/base', function (Dep) {
 
     });
 });
-

@@ -131,7 +131,7 @@ Espo.define('views/fields/duration', 'views/fields/enum', function (Dep) {
             }
 
             if (this.mode == 'edit') {
-                this.$duration = this.$el.find('[name="' + this.name + '"]');
+                this.$duration = this.$el.find('.main-element');
                 this.$duration.on('change', function () {
                     this.seconds = parseInt(this.$duration.val());
                     this.updateDateEnd();
@@ -220,7 +220,7 @@ Espo.define('views/fields/duration', 'views/fields/enum', function (Dep) {
                         return $(el).val() >= seconds;
                     }).first();
 
-                    if ($found.size()) {
+                    if ($found.length) {
                         if ($found.val() != seconds) {
                             $o.insertBefore($found);
                         };
@@ -240,4 +240,3 @@ Espo.define('views/fields/duration', 'views/fields/enum', function (Dep) {
         },
     });
 });
-

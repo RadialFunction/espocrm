@@ -74,10 +74,8 @@ class Job
         ])->findOne();
     }
 
-    public function getPendingJobList()
+    public function getPendingJobList($queue = null, $limit = 0)
     {
-        $limit = intval($this->getConfig()->get('jobMaxPortion', 0));
-
         $selectParams = [
             'select' => [
                 'id',
@@ -87,15 +85,15 @@ class Job
                 'targetId',
                 'targetType',
                 'methodName',
-                'method', // TODO remove deprecated
                 'serviceName',
                 'data'
             ],
             'whereClause' => [
                 'status' => CronManager::PENDING,
-                'executeTime<=' => date('Y-m-d H:i:s')
+                'executeTime<=' => date('Y-m-d H:i:s'),
+                'queue' => $queue
             ],
-            'orderBy' => 'executeTime'
+            'orderBy' => 'number'
         ];
         if ($limit) {
             $selectParams['offset'] = 0;
@@ -109,7 +107,7 @@ class Job
     {
         $where = [
             'scheduledJobId' => $scheduledJobId,
-            'status' => CronManager::RUNNING
+            'status' => [CronManager::RUNNING, CronManager::READY]
         ];
         if ($targetId && $targetType) {
             $where['targetId'] = $targetId;
@@ -127,7 +125,7 @@ class Job
         $query = "
             SELECT scheduled_job_id FROM job
             WHERE
-                `status` = 'Running' AND
+                (`status` = 'Running' OR `status` = 'Ready') AND
                 scheduled_job_id IS NOT NULL AND
                 target_id IS NULL AND
                 deleted = 0
@@ -145,14 +143,13 @@ class Job
     }
 
     /**
-     * Get Jobs by ScheduledJobId and date
      *
      * @param  string $scheduledJobId
      * @param  string $time
      *
      * @return array
      */
-    public function getJobByScheduledJob($scheduledJobId, $time)
+    public function getJobByScheduledJobIdOnMinute($scheduledJobId, $time)
     {
         $dateObj = new \DateTime($time);
         $timeWithoutSeconds = $dateObj->format('Y-m-d H:i:');
@@ -176,6 +173,16 @@ class Job
         return $scheduledJob;
     }
 
+    public function getPendingCountByScheduledJobId($scheduledJobId)
+    {
+        $countPending = $this->getEntityManager()->getRepository('Job')->where([
+            'scheduledJobId' => $scheduledJobId,
+            'status' => CronManager::PENDING
+        ])->count();
+
+        return $countPending;
+    }
+
     /**
      * Mark pending jobs (all jobs that exceeded jobPeriod)
      *
@@ -196,7 +203,7 @@ class Job
         $select = "
             SELECT id, scheduled_job_id, execute_time, target_id, target_type, pid FROM `job`
             WHERE
-            `status` = '" . CronManager::RUNNING ."' AND execute_time < '".date('Y-m-d H:i:s', $time)."'
+            (`status` = '" . CronManager::RUNNING ."' OR `status` = '" . CronManager::READY ."') AND execute_time < '".date('Y-m-d H:i:s', $time)."'
         ";
         $sth = $pdo->prepare($select);
         $sth->execute();
@@ -273,7 +280,6 @@ class Job
         foreach ($duplicateJobList as $row) {
             if (!empty($row['scheduled_job_id'])) {
 
-                /* no possibility to use limit in update or subqueries */
                 $query = "
                     SELECT id FROM `job`
                     WHERE
@@ -348,10 +354,5 @@ class Job
                 $pdo->prepare($update)->execute();
             }
         }
-    }
-
-    public function getPid()
-    {
-        return System::getPid();
     }
 }

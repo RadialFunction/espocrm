@@ -90,6 +90,7 @@ class Converter
         'select' => 'select',
         'orderBy' => 'orderBy',
         'where' => 'where',
+        'storeArrayValues' => 'storeArrayValues'
     );
 
     protected $idParams = array(
@@ -212,16 +213,16 @@ class Converter
             $collectionDefs = $entityMetadata['collection'];
             $ormMetadata[$entityName]['collection'] = array();
 
-            if (array_key_exists('sortByByColumn', $collectionDefs)) {
-                $ormMetadata[$entityName]['collection']['orderBy'] = $collectionDefs['sortByByColumn'];
-            } else if (array_key_exists('sortBy', $collectionDefs)) {
-                if (array_key_exists($collectionDefs['sortBy'], $ormMetadata[$entityName]['fields'])) {
-                    $ormMetadata[$entityName]['collection']['orderBy'] = $collectionDefs['sortBy'];
+            if (array_key_exists('orderByColumn', $collectionDefs)) {
+                $ormMetadata[$entityName]['collection']['orderBy'] = $collectionDefs['orderByColumn'];
+            } else if (array_key_exists('orderBy', $collectionDefs)) {
+                if (array_key_exists($collectionDefs['orderBy'], $ormMetadata[$entityName]['fields'])) {
+                    $ormMetadata[$entityName]['collection']['orderBy'] = $collectionDefs['orderBy'];
                 }
             }
             $ormMetadata[$entityName]['collection']['order'] = 'ASC';
-            if (array_key_exists('asc', $collectionDefs)) {
-                $ormMetadata[$entityName]['collection']['order'] = $collectionDefs['asc'] ? 'ASC' : 'DESC';
+            if (array_key_exists('order', $collectionDefs)) {
+                $ormMetadata[$entityName]['collection']['order'] = strtoupper($collectionDefs['order']);
             }
         }
 
@@ -260,6 +261,18 @@ class Converter
 
                     case 'bool':
                         $fieldParams['default'] = isset($fieldParams['default']) ? (bool) $fieldParams['default'] : $this->defaultValue['bool'];
+                        break;
+
+                    //todo: remove the types from ORM Metadata. Types are deprecated.
+                    case 'email':
+                    case 'phone':
+                        break;
+
+                    default:
+                        $constName = strtoupper(Util::toUnderScore($fieldParams['type']));
+                        if (!defined('\\Espo\\ORM\\Entity::' . $constName)) {
+                            $fieldParams['type'] = $this->defaultFieldType;
+                        }
                         break;
                 }
             }
@@ -411,6 +424,10 @@ class Converter
 
         if (isset($fieldTypeMetadata['fieldDefs'])) {
             $fieldParams = Util::merge($fieldParams, $fieldTypeMetadata['fieldDefs']);
+        }
+
+        if ($fieldParams['type'] == 'base' && isset($fieldParams['dbType'])) {
+            $fieldParams['notStorable'] = false;
         }
 
         /** check if need to skipOrmDefs this field in ORM metadata */

@@ -120,6 +120,7 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
                 if (this.model.get(this.name)) {
                     data.isErased = this.model.get(this.name).indexOf(this.erasedPlaceholder) === 0
                 }
+                data.valueIsSet = this.model.has(this.name);
             }
 
             return data;
@@ -154,7 +155,7 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
 
             'click [data-action="removeEmailAddress"]': function (e) {
                 var $block = $(e.currentTarget).closest('div.email-address-block');
-                if ($block.parent().children().size() == 1) {
+                if ($block.parent().children().length == 1) {
                     $block.find('input.email-address').val('');
                 } else {
                     this.removeEmailAddressBlock($block);
@@ -167,7 +168,7 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
                 var $block = $input.closest('div.email-address-block');
 
                 if ($input.val() == '') {
-                    if ($block.parent().children().size() == 1) {
+                    if ($block.parent().children().length == 1) {
                         $block.find('input.email-address').val('');
                     } else {
                         this.removeEmailAddressBlock($block);
@@ -272,17 +273,17 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
                 }
             });
 
-            if (c == $input.size()) {
-                this.$el.find('[data-action="addEmailAddress"]').removeClass('disabled');
+            if (c == $input.length) {
+                this.$el.find('[data-action="addEmailAddress"]').removeClass('disabled').removeAttr('disabled');
             } else {
-                this.$el.find('[data-action="addEmailAddress"]').addClass('disabled');
+                this.$el.find('[data-action="addEmailAddress"]').addClass('disabled').attr('disabled', 'disabled');
             }
         },
 
         manageButtonsVisibility: function () {
             var $primary = this.$el.find('button[data-property-type="primary"]');
             var $remove = this.$el.find('button[data-action="removeEmailAddress"]');
-            if ($primary.size() > 1) {
+            if ($primary.length > 1) {
                 $primary.removeClass('hidden');
                 $remove.removeClass('hidden');
             } else {
@@ -298,6 +299,7 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
             };
 
             var scope = this.model.name;
+
             switch (scope) {
                 case 'Account':
                 case 'Lead':
@@ -320,6 +322,13 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
                     break;
             }
 
+            if (this.model.collection && this.model.collection.parentModel) {
+                if (this.checkParentTypeAvailability(this.model.collection.parentModel.entityType)) {
+                    attributes.parentType = this.model.collection.parentModel.entityType;
+                    attributes.parentId = this.model.collection.parentModel.id;
+                    attributes.parentName = this.model.collection.parentModel.get('name');
+                }
+            }
 
             if (!attributes.parentId) {
                 if (this.checkParentTypeAvailability(this.model.name)) {
@@ -341,7 +350,11 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
                 attributes.nameHash[emailAddress] = this.model.get('name');
             }
 
-            if (this.getPreferences().get('emailUseExternalClient')) {
+            if (
+                this.getConfig().get('emailForceUseExternalClient') ||
+                this.getPreferences().get('emailUseExternalClient') ||
+                !this.getAcl().checkScope('Email', 'create')
+            ) {
                 require('email-helper', function (EmailHelper) {
                     var emailHelper = new EmailHelper();
                     var link = emailHelper.composeMailToLink(attributes, this.getConfig().get('outboundEmailBccAddress'));
@@ -378,7 +391,7 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
 
             var $list = this.$el.find('div.email-address-block');
 
-            if ($list.size()) {
+            if ($list.length) {
                 $list.each(function (i, d) {
                     var row = {};
                     var $d = $(d);

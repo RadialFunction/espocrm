@@ -589,7 +589,7 @@ class Manager
             }
         }
 
-        if ($removeWithDir) {
+        if ($removeWithDir && $this->isDirEmpty($dirPath)) {
             $result &= $this->rmdir($dirPath);
         }
 
@@ -891,6 +891,20 @@ class Manager
     }
 
     /**
+     * Check if $path is writable
+     *
+     * @param  string | array  $path
+     *
+     * @return boolean
+     */
+    public function isReadable($path)
+    {
+        $existFile = $this->getExistsPath($path);
+
+        return is_readable($existFile);
+    }
+
+    /**
      * Get exists path. Ex. if check /var/www/espocrm/custom/someFile.php and this file doesn't extist, result will be /var/www/espocrm/custom
      *
      * @param  string | array $path
@@ -908,4 +922,3 @@ class Manager
         return $fullPath;
     }
 }
-

@@ -71,7 +71,7 @@ Espo.define('views/fields/datetime-optional', 'views/fields/datetime', function 
             var $time = this.$time;
 
             $time.timepicker({
-                step: 30,
+                step: this.params.minuteStep || 30,
                 scrollDefaultNow: true,
                 timeFormat: this.timeFormatMap[this.getDateTime().timeFormat],
                 noneOption: [{
@@ -87,8 +87,8 @@ Espo.define('views/fields/datetime-optional', 'views/fields/datetime', function 
         fetch: function () {
             var data = {};
 
-            var date = this.$el.find('[name="' + this.name + '"]').val();
-            var time = this.$el.find('[name="' + this.name + '-time"]').val();
+            var date = this.$date.val();
+            var time = this.$time.val();
 
             var value = null;
             if (time != this.noneOption && time != '') {
@@ -100,8 +100,16 @@ Espo.define('views/fields/datetime-optional', 'views/fields/datetime', function 
             } else {
                 if (date != '') {
                     data[this.nameDate] = this.getDateTime().fromDisplayDate(date);
+                    var dateTimeValue = data[this.nameDate] + ' 00:00:00';
+
+                    dateTimeValue = moment.utc(dateTimeValue)
+                        .tz(this.getConfig().get('timeZone') || 'UTC')
+                        .format(this.getDateTime().internalDateTimeFullFormat);
+
+                    data[this.name] = dateTimeValue;
                 } else {
                     data[this.nameDate] = null;
+                    data[this.name] = null;
                 }
             }
             return data;

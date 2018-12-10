@@ -90,7 +90,7 @@ class EntityManager extends \Espo\Core\Controllers\Base
             $params['iconClass'] = $data['iconClass'];
         }
         if (isset($data['fullTextSearch'])) {
-            $params['fullTestSearch'] = $data['fullTextSearch'];
+            $params['fullTextSearch'] = $data['fullTextSearch'];
         }
 
         $params['kanbanViewMode'] = !empty($data['kanbanViewMode']);
@@ -129,10 +129,6 @@ class EntityManager extends \Espo\Core\Controllers\Base
         }
         $name = $data['name'];
         $name = filter_var($name, \FILTER_SANITIZE_STRING);
-
-        if (!empty($data['sortDirection'])) {
-            $data['asc'] = $data['sortDirection'] === 'asc';
-        }
 
         $result = $this->getContainer()->get('entityManagerUtil')->update($name, $data);
 

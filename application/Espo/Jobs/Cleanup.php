@@ -33,7 +33,7 @@ use \Espo\Core\Exceptions;
 
 class Cleanup extends \Espo\Core\Jobs\Base
 {
-    protected $cleanupJobPeriod = '1 month';
+    protected $cleanupJobPeriod = '10 days';
 
     protected $cleanupActionHistoryPeriod = '15 days';
 
@@ -45,13 +45,15 @@ class Cleanup extends \Espo\Core\Jobs\Base
 
     protected $cleanupRemovedNotesPeriod = '2 months';
 
-    protected $cleanupAttachmentsPeriod = '1 month';
+    protected $cleanupAttachmentsPeriod = '15 days';
 
     protected $cleanupAttachmentsFromPeriod = '3 months';
 
     protected $cleanupRemindersPeriod = '15 days';
 
     protected $cleanupBackupPeriod = '2 month';
+
+    protected $cleanupDeletedRecordsPeriod = '3 months';
 
     public function run()
     {
@@ -66,6 +68,7 @@ class Cleanup extends \Espo\Core\Jobs\Base
         $this->cleanupAuthLog();
         $this->cleanupUpgradeBackups();
         $this->cleanupUniqueIds();
+        $this->cleanupDeletedRecords();
     }
 
     protected function cleanupJobs()
@@ -73,7 +76,10 @@ class Cleanup extends \Espo\Core\Jobs\Base
         $pdo = $this->getEntityManager()->getPDO();
 
         $query = "DELETE FROM `job` WHERE DATE(modified_at) < ".$pdo->quote($this->getCleanupJobFromDate())." AND status <> 'Pending'";
+        $sth = $pdo->prepare($query);
+        $sth->execute();
 
+        $query = "DELETE FROM `job` WHERE DATE(modified_at) < ".$pdo->quote($this->getCleanupJobFromDate())." AND status = 'Pending' AND deleted = 1";
         $sth = $pdo->prepare($query);
         $sth->execute();
     }
@@ -195,7 +201,7 @@ class Cleanup extends \Espo\Core\Jobs\Base
                 )
             ),
             'createdAt<' => $datetime->format('Y-m-d H:i:s')
-        ))->limit(0, 1000)->find();
+        ))->limit(0, 5000)->find();
 
         foreach ($collection as $e) {
             $this->getEntityManager()->removeEntity($e);
@@ -220,7 +226,7 @@ class Cleanup extends \Espo\Core\Jobs\Base
                 ),
                 'createdAt<' => $datetime->format('Y-m-d H:i:s'),
                 'createdAt>' => '2017-05-10 00:00:00'
-            ))->limit(0, 1000)->find();
+            ))->limit(0, 5000)->find();
 
             foreach ($collection as $e) {
                 $this->getEntityManager()->removeEntity($e);
@@ -252,25 +258,30 @@ class Cleanup extends \Espo\Core\Jobs\Base
             }
             if (!$hasAttachmentField) continue;
 
-            $deletedEntityList = $this->getEntityManager()->getRepository($scope)->where([
+            if (!$this->getEntityManager()->hasRepository($scope)) continue;
+            $repository = $this->getEntityManager()->getRepository($scope);
+            if (!method_exists($repository, 'find')) continue;
+            if (!method_exists($repository, 'where')) continue;
+
+            $deletedEntityList = $repository->where([
                 'deleted' => 1,
                 'modifiedAt<' => $datetime->format('Y-m-d H:i:s'),
                 'modifiedAt>' => $datetimeFrom->format('Y-m-d H:i:s'),
 
             ])->find(['withDeleted' => true]);
             foreach ($deletedEntityList as $deletedEntity) {
-                $attachmentToRemoveList = $this->getEntityManager()->getRepository('Attachment')->where(array(
-                    'OR' => array(
-                        array(
+                $attachmentToRemoveList = $this->getEntityManager()->getRepository('Attachment')->where([
+                    'OR' => [
+                        [
                             'relatedType' => $scope,
                             'relatedId' => $deletedEntity->id
-                        ),
-                        array(
+                        ],
+                        [
                             'parentType' => $scope,
                             'parentId' => $deletedEntity->id
-                        )
-                    )
-                ))->find();
+                        ]
+                    ]
+                ])->find();
 
                 foreach ($attachmentToRemoveList as $attachmentToRemove) {
                     $this->getEntityManager()->removeEntity($attachmentToRemove);
@@ -365,6 +376,69 @@ class Cleanup extends \Espo\Core\Jobs\Base
                 $info = new \SplFileInfo($dirPath);
                 if ($datetime->getTimestamp() > $info->getMTime()) {
                     $fileManager->removeInDir($dirPath, true);
+                }
+            }
+        }
+    }
+
+    protected function cleanupDeletedRecords()
+    {
+        if (!$this->getConfig()->get('cleanupDeletedRecords')) return;
+        $period = '-' . $this->getConfig()->get('cleanupDeletedRecordsPeriod', $this->cleanupDeletedRecordsPeriod);
+        $datetime = new \DateTime('-' . $period);
+
+        $query = $this->getEntityManager()->getQuery();
+
+        $scopeList = array_keys($this->getMetadata()->get(['scopes']));
+        foreach ($scopeList as $scope) {
+            if (!$this->getMetadata()->get(['scopes', $scope, 'entity'])) continue;
+            if ($scope === 'Attachment') continue;
+            if (!$this->getMetadata()->get(['entityDefs', $scope, 'fields', 'modifiedAt'])) continue;
+
+            if (!$this->getEntityManager()->hasRepository($scope)) continue;
+            $repository = $this->getEntityManager()->getRepository($scope);
+            if (!$repository) continue;
+            if (!method_exists($repository, 'find')) continue;
+            if (!method_exists($repository, 'where')) continue;
+            if (!method_exists($repository, 'select')) continue;
+            if (!method_exists($repository, 'deleteFromDb')) continue;
+
+            $deletedEntityList = $repository->select(['id', 'deleted'])->where([
+                'deleted' => 1,
+                'modifiedAt<' => $datetime->format('Y-m-d H:i:s')
+            ])->find(['withDeleted' => true]);
+            foreach ($deletedEntityList as $e) {
+                if (!$e->get('deleted')) continue;
+                $repository->deleteFromDb($e->id);
+
+                foreach ($e->getRelationList() as $relation) {
+                    if ($e->getRelationType($relation) !== 'manyMany') continue;
+                    try {
+                        $relationName = $e->getRelationParam($relation, 'relationName');
+                        $relationTable = $query->toDb($relationName);
+
+                        $midKey = $e->getRelationParam($relation, 'midKeys')[0];
+
+                        $where = [];
+                        $where[$midKey] = $e->id;
+
+                        $conditions = $e->getRelationParam($relation, 'conditions');
+                        if (!empty($conditions)) {
+                            foreach ($conditions as $key => $value) {
+                                $where[$key] = $value;
+                            }
+                        }
+
+                        $partList = [];
+                        foreach ($where as $key => $value) {
+                            $partList[] = $query->toDb($key) . ' = ' . $query->quote($value);
+                        }
+                        if (empty($partList)) continue;
+
+                        $sql = "DELETE FROM `{$relationTable}` WHERE " . implode(' AND ', $partList);
+
+                        $this->getEntityManager()->getPDO()->query($sql);
+                    } catch (\Exception $e) {}
                 }
             }
         }

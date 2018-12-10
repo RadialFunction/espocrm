@@ -112,7 +112,7 @@ class EmailNotification extends \Espo\Core\Services\Base
 
         if (!$user) return;
 
-        if ($user->get('isPortalUser')) return;
+        if ($user->isPortal()) return;
 
         $preferences = $this->getEntityManager()->getEntity('Preferences', $userId);
         if (!$preferences) return;
@@ -120,6 +120,8 @@ class EmailNotification extends \Espo\Core\Services\Base
 
         $assignerUser = $this->getEntityManager()->getEntity('User', $assignerUserId);
         $entity = $this->getEntityManager()->getEntity($entityType, $entityId);
+
+        $this->loadParentNameFields($entity);
 
         if (!$entity) return true;
         if (!$assignerUser) return true;
@@ -270,9 +272,9 @@ class EmailNotification extends \Espo\Core\Services\Base
         $forPortal = $this->getConfig()->get('portalStreamEmailNotifications');
 
         if ($forInternal && !$forPortal) {
-            $selectParams['whereClause']['user.isPortalUser'] = false;
+            $selectParams['whereClause']['user.type!='] = 'portal';
         } else if (!$forInternal && $forPortal) {
-            $selectParams['whereClause']['user.isPortalUser'] = true;
+            $selectParams['whereClause']['user.type'] = 'portal';
         }
 
         return $selectParams;
@@ -487,7 +489,7 @@ class EmailNotification extends \Espo\Core\Services\Base
 
     protected function getSiteUrl(\Espo\Entities\User $user)
     {
-        if ($user->get('isPortalUser')) {
+        if ($user->isPortal()) {
             if (!array_key_exists($user->id, $this->userIdPortalCacheMap)) {
                 $this->userIdPortalCacheMap[$user->id] = null;
 
@@ -665,6 +667,16 @@ class EmailNotification extends \Espo\Core\Services\Base
             $this->getMailSender()->send($email);
         } catch (\Exception $e) {
             $GLOBALS['log']->error('EmailNotification: [' . $e->getCode() . '] ' .$e->getMessage());
+        }
+    }
+
+    protected function loadParentNameFields(Entity $entity)
+    {
+        $fieldDefs = $this->getMetadata()->get(['entityDefs', $entity->getEntityType(), 'fields'], []);
+        foreach ($fieldDefs as $field => $defs) {
+            if (isset($defs['type']) && $defs['type'] == 'linkParent') {
+                $entity->loadParentNameField($field);
+            }
         }
     }
 }

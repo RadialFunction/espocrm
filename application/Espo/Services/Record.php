@@ -42,7 +42,7 @@ use \Espo\Core\Utils\Util;
 
 class Record extends \Espo\Core\Services\Base
 {
-    protected $dependencies = array(
+    protected $dependencies = [
         'entityManager',
         'user',
         'metadata',
@@ -55,7 +55,7 @@ class Record extends \Espo\Core\Services\Base
         'fileStorageManager',
         'injectableFactory',
         'fieldManagerUtil'
-    );
+    ];
 
     protected $getEntityBeforeUpdate = false;
 
@@ -65,13 +65,27 @@ class Record extends \Espo\Core\Services\Base
 
     private $streamService;
 
-    protected $notFilteringAttributeList =[]; // TODO maybe remove it
+    protected $notFilteringAttributeList = []; // TODO maybe remove it
+
+    protected $forbiddenAttributeList = [];
 
     protected $internalAttributeList = [];
 
+    protected $onlyAdminAttributeList = [];
+
     protected $readOnlyAttributeList = [];
 
+    protected $nonAdminReadOnlyAttributeList = [];
+
+    protected $forbiddenLinkList = [];
+
+    protected $internalLinkList = [];
+
     protected $readOnlyLinkList = [];
+
+    protected $nonAdminReadOnlyLinkList = [];
+
+    protected $onlyAdminLinkList = [];
 
     protected $linkSelectParams = [];
 
@@ -120,6 +134,45 @@ class Record extends \Espo\Core\Services\Base
             }
         }
         $this->entityName = $this->entityType;
+    }
+
+    public function prepare()
+    {
+        parent::prepare();
+
+        $aclManager = $this->getInjection('aclManager');
+
+        foreach ($aclManager->getScopeRestrictedAttributeList($this->entityType, 'forbidden') as $item) {
+            if (!in_array($item, $this->forbiddenAttributeList)) $this->forbiddenAttributeList[] = $item;
+        }
+        foreach ($aclManager->getScopeRestrictedAttributeList($this->entityType, 'internal') as $item) {
+            if (!in_array($item, $this->internalAttributeList)) $this->internalAttributeList[] = $item;
+        }
+        foreach ($aclManager->getScopeRestrictedAttributeList($this->entityType, 'onlyAdmin') as $item) {
+            if (!in_array($item, $this->onlyAdminAttributeList)) $this->onlyAdminAttributeList[] = $item;
+        }
+        foreach ($aclManager->getScopeRestrictedAttributeList($this->entityType, 'readOnly') as $item) {
+            if (!in_array($item, $this->readOnlyAttributeList)) $this->readOnlyAttributeList[] = $item;
+        }
+        foreach ($aclManager->getScopeRestrictedAttributeList($this->entityType, 'nonAdminReadOnly') as $item) {
+            if (!in_array($item, $this->nonAdminReadOnlyAttributeList)) $this->nonAdminReadOnlyAttributeList[] = $item;
+        }
+
+        foreach ($aclManager->getScopeRestrictedLinkList($this->entityType, 'forbidden') as $item) {
+            if (!in_array($item, $this->forbiddenLinkList)) $this->forbiddenLinkList[] = $item;
+        }
+        foreach ($aclManager->getScopeRestrictedLinkList($this->entityType, 'internal') as $item) {
+            if (!in_array($item, $this->internalLinkList)) $this->internalLinkList[] = $item;
+        }
+        foreach ($aclManager->getScopeRestrictedLinkList($this->entityType, 'onlyAdmin') as $item) {
+            if (!in_array($item, $this->onlyAdminLinkList)) $this->onlyAdminLinkList[] = $item;
+        }
+        foreach ($aclManager->getScopeRestrictedLinkList($this->entityType, 'readOnly') as $item) {
+            if (!in_array($item, $this->readOnlyLinkList)) $this->readOnlyLinkList[] = $item;
+        }
+        foreach ($aclManager->getScopeRestrictedLinkList($this->entityType, 'nonAdminReadOnly') as $item) {
+            if (!in_array($item, $this->nonAdminReadOnlyLinkList)) $this->nonAdminReadOnlyLinkList[] = $item;
+        }
     }
 
     public function setEntityType($entityType)
@@ -281,7 +334,7 @@ class Record extends \Espo\Core\Services\Base
         }
     }
 
-    protected function loadLinkMultipleFieldsForList(Entity $entity, $selectAttributeList)
+    public function loadLinkMultipleFieldsForList(Entity $entity, $selectAttributeList)
     {
         foreach ($selectAttributeList as $attribute) {
             if ($entity->getAttributeParam($attribute, 'isLinkMultipleIdList')) {
@@ -327,15 +380,51 @@ class Record extends \Espo\Core\Services\Base
         foreach ($linkDefs as $link => $defs) {
             if (isset($defs['type']) && $defs['type'] == 'belongsTo') {
                 if (!empty($defs['noJoin']) && !empty($defs['entity'])) {
-                    $nameField = $link . 'Name';
-                    $idField = $link . 'Id';
-                    if ($entity->hasAttribute($nameField) && $entity->hasAttribute($idField)) {
-                        $id = $entity->get($idField);
+                    $nameAttribute = $link . 'Name';
+                    $idAttribute = $link . 'Id';
+                    if ($entity->hasAttribute($nameAttribute) && $entity->hasAttribute($idAttribute)) {
+                        $id = $entity->get($idAttribute);
+                    } else {
+                        continue;
                     }
+                    if (!empty($defs['entity'])) {
+                        $scope = $defs['entity'];
+                        if ($this->getEntityManager()->hasRepository($scope)) {
+                            $foreignEntity = $this->getEntityManager()->getRepository($scope)
+                                ->select(['id', 'name'])
+                                ->where(['id' => $id])
+                                ->findOne();
+                            if ($foreignEntity) {
+                                $entity->set($nameAttribute, $foreignEntity->get('name'));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-                    $scope = $defs['entity'];
-                    if (!empty($scope) && $foreignEntity = $this->getEntityManager()->getEntity($scope, $id)) {
-                        $entity->set($nameField, $foreignEntity->get('name'));
+    protected function loadEmptyNameLinkFields(Entity $entity)
+    {
+        $linkDefs = $this->getMetadata()->get(['entityDefs', $entity->getEntityType(), 'links'], []);
+        foreach ($linkDefs as $link => $defs) {
+            if (!isset($defs['type'])) continue;
+            if ($defs['type'] != 'belongsTo') continue;
+
+            $nameAttribute = $link . 'Name';
+            $idAttribute = $link . 'Id';
+
+            if ($entity->get($idAttribute) && !$entity->get($nameAttribute)) {
+                $id = $entity->get($idAttribute);
+                if (empty($defs['entity'])) continue;
+                $scope = $defs['entity'];
+                if ($this->getEntityManager()->hasRepository($scope)) {
+                    $foreignEntity = $this->getEntityManager()->getRepository($scope)
+                        ->select(['id', 'name'])
+                        ->where(['id' => $id])
+                        ->findOne();
+                    if ($foreignEntity) {
+                        $entity->set($nameAttribute, $foreignEntity->get('name'));
                     }
                 }
             }
@@ -352,6 +441,7 @@ class Record extends \Espo\Core\Services\Base
         $this->loadEmailAddressField($entity);
         $this->loadPhoneNumberField($entity);
         $this->loadNotJoinedLinkFields($entity);
+        $this->loadEmptyNameLinkFields($entity);
     }
 
     public function loadAdditionalFieldsForList(Entity $entity)
@@ -621,12 +711,28 @@ class Record extends \Espo\Core\Services\Base
             unset($data->$attribute);
         }
 
+        foreach ($this->forbiddenAttributeList as $attribute) {
+            unset($data->$attribute);
+        }
+
         foreach ($data as $key => $value) {
             $data->$key = $this->filterInputAttribute($key, $data->$key);
         }
 
+        if (!$this->getUser()->isAdmin()) {
+            foreach ($this->onlyAdminAttributeList as $attribute) {
+                unset($data->$attribute);
+            }
+        }
+
         foreach ($this->getAcl()->getScopeForbiddenAttributeList($this->entityType, 'edit') as $attribute) {
             unset($data->$attribute);
+        }
+
+        if (!$this->getUser()->isAdmin()) {
+            foreach ($this->nonAdminReadOnlyAttributeList as $attribute) {
+                unset($data->$attribute);
+            }
         }
     }
 
@@ -640,10 +746,10 @@ class Record extends \Espo\Core\Services\Base
         if (empty($data->forceDuplicate)) {
             $duplicates = $this->checkEntityForDuplicate($entity, $data);
             if (!empty($duplicates)) {
-                $reason = array(
+                $reason = [
                     'reason' => 'Duplicate',
                     'data' => $duplicates
-                );
+                ];
                 throw new Conflict(json_encode($reason));
             }
         }
@@ -691,6 +797,8 @@ class Record extends \Espo\Core\Services\Base
 
         $this->filterInput($data);
         $this->handleInput($data);
+
+        unset($data->id);
 
         unset($data->modifiedById);
         unset($data->modifiedByName);
@@ -742,6 +850,8 @@ class Record extends \Espo\Core\Services\Base
 
         $this->filterInput($data);
         $this->handleInput($data);
+
+        unset($data->id);
 
         unset($data->modifiedById);
         unset($data->modifiedByName);
@@ -1097,6 +1207,18 @@ class Record extends \Espo\Core\Services\Base
             throw new Error();
         }
 
+        if (in_array($link, $this->forbiddenLinkList)) {
+            throw new Forbidden();
+        }
+
+        if (in_array($link, $this->internalLinkList)) {
+            throw new Forbidden();
+        }
+
+        if (!$this->getUser()->isAdmin() && in_array($link, $this->onlyAdminLinkList)) {
+            throw new Forbidden();
+        }
+
         $methodName = 'findLinkedEntities' . ucfirst($link);
         if (method_exists($this, $methodName)) {
             return $this->$methodName($id, $params);
@@ -1176,7 +1298,19 @@ class Record extends \Espo\Core\Services\Base
             throw new BadRequest;
         }
 
+        if (in_array($link, $this->forbiddenLinkList)) {
+            throw new Forbidden();
+        }
+
         if (in_array($link, $this->readOnlyLinkList)) {
+            throw new Forbidden();
+        }
+
+        if (!$this->getUser()->isAdmin() && in_array($link, $this->nonAdminReadOnlyLinkList)) {
+            throw new Forbidden();
+        }
+
+        if (!$this->getUser()->isAdmin() && in_array($link, $this->onlyAdminLinkList)) {
             throw new Forbidden();
         }
 
@@ -1220,6 +1354,22 @@ class Record extends \Espo\Core\Services\Base
             throw new Forbidden();
         }
 
+        if (in_array($link, $this->internalLinkList)) {
+            throw new Forbidden();
+        }
+
+        if (in_array($link, $this->forbiddenLinkList)) {
+            throw new Forbidden();
+        }
+
+        if (!$this->getUser()->isAdmin() && in_array($link, $this->nonAdminReadOnlyLinkList)) {
+            throw new Forbidden();
+        }
+
+        if (!$this->getUser()->isAdmin() && in_array($link, $this->onlyAdminLinkList)) {
+            throw new Forbidden();
+        }
+
         $entity = $this->getRepository()->get($id);
         if (!$entity) {
             throw new NotFound();
@@ -1254,6 +1404,22 @@ class Record extends \Espo\Core\Services\Base
     {
         if (empty($id) || empty($link)) {
             throw new BadRequest;
+        }
+
+        if (in_array($link, $this->forbiddenLinkList)) {
+            throw new Forbidden();
+        }
+
+        if (in_array($link, $this->readOnlyLinkList)) {
+            throw new Forbidden();
+        }
+
+        if (!$this->getUser()->isAdmin() && in_array($link, $this->nonAdminReadOnlyLinkList)) {
+            throw new Forbidden();
+        }
+
+        if (!$this->getUser()->isAdmin() && in_array($link, $this->onlyAdminLinkList)) {
+            throw new Forbidden();
         }
 
         $entity = $this->getRepository()->get($id);
@@ -1328,7 +1494,7 @@ class Record extends \Espo\Core\Services\Base
                 if ($this->getAcl()->check($entity, 'edit') && $this->checkEntityForMassUpdate($entity, $data)) {
                     $entity->set($data);
                     if ($this->checkAssignment($entity)) {
-                        if ($repository->save($entity)) {
+                        if ($repository->save($entity, ['massUpdate' => true])) {
                             $idsUpdated[] = $entity->id;
                             $count++;
 
@@ -1366,7 +1532,7 @@ class Record extends \Espo\Core\Services\Base
                 if ($this->getAcl()->check($entity, 'edit') && $this->checkEntityForMassUpdate($entity, $data)) {
                     $entity->set($data);
                     if ($this->checkAssignment($entity)) {
-                        if ($repository->save($entity)) {
+                        if ($repository->save($entity, ['massUpdate' => true, 'skipStreamNotesAcl' => true])) {
                             $idsUpdated[] = $entity->id;
                             $count++;
 
@@ -1595,6 +1761,15 @@ class Record extends \Espo\Core\Services\Base
         if (in_array($attribute, $this->internalAttributeList)) {
             return false;
         }
+
+        if (in_array($attribute, $this->forbiddenAttributeList)) {
+            return false;
+        }
+
+        if (!$this->getUser()->isAdmin() && in_array($attribute, $this->onlyAdminAttributeList)) {
+            return false;
+        }
+
         if (!$isExportAllFields) {
             return true;
         }
@@ -1664,10 +1839,11 @@ class Record extends \Espo\Core\Services\Base
                 throw new BadRequest();
             }
 
-            $orderBy = $this->getMetadata()->get(['entityDefs', $this->getEntityType(), 'collection', 'sortBy']);
-            $desc = !$this->getMetadata()->get(['entityDefs', $this->getEntityType(), 'collection', 'asc']);
+            $orderBy = $this->getMetadata()->get(['entityDefs', $this->getEntityType(), 'collection', 'orderBy']);
+            $order = $this->getMetadata()->get(['entityDefs', $this->getEntityType(), 'collection', 'order']);
+
             if ($orderBy) {
-                $selectManager->applyOrder($orderBy, $desc, $selectParams);
+                $selectManager->applyOrder($orderBy, $order, $selectParams);
             }
 
             $this->getEntityManager()->getRepository($this->getEntityType())->handleSelectParams($selectParams);
@@ -1811,14 +1987,11 @@ class Record extends \Espo\Core\Services\Base
         $attachment->set('name', $fileName);
         $attachment->set('role', 'Export File');
         $attachment->set('type', $mimeType);
+        $attachment->set('contents', $contents);
 
         $this->getEntityManager()->saveEntity($attachment);
 
-        if (!empty($attachment->id)) {
-            $this->getInjection('fileStorageManager')->putContents($attachment, $contents);
-            return $attachment->id;
-        }
-        throw new Error();
+        return $attachment->id;
     }
 
     protected function getAttributeFromEntityForExport(Entity $entity, $attribute)
@@ -1860,8 +2033,16 @@ class Record extends \Espo\Core\Services\Base
 
     public function prepareEntityForOutput(Entity $entity)
     {
-        foreach ($this->internalAttributeList as $field) {
-            $entity->clear($field);
+        foreach ($this->internalAttributeList as $attribute) {
+            $entity->clear($attribute);
+        }
+        foreach ($this->forbiddenAttributeList as $attribute) {
+            $entity->clear($attribute);
+        }
+        if (!$this->getUser()->isAdmin()) {
+            foreach ($this->onlyAdminAttributeList as $attribute) {
+                $entity->clear($attribute);
+            }
         }
         foreach ($this->getAcl()->getScopeForbiddenAttributeList($entity->getEntityType(), 'read') as $attribute) {
             $entity->clear($attribute);
@@ -1983,6 +2164,8 @@ class Record extends \Espo\Core\Services\Base
 
         foreach ($sourceList as $source) {
             $this->getEntityManager()->removeEntity($source);
+
+            $this->processActionHistoryRecord('delete', $source);
         }
 
         if ($hasEmailAddress) {
@@ -2026,6 +2209,8 @@ class Record extends \Espo\Core\Services\Base
 
         $entity->set($attributes);
         $repository->save($entity);
+
+        $this->processActionHistoryRecord('update', $entity);
 
         $this->afterMerge($entity, $sourceList, $attributes);
 
@@ -2227,8 +2412,8 @@ class Record extends \Espo\Core\Services\Base
                 }
             }
 
-            if (!empty($params['sortBy'])) {
-                $sortByField = $params['sortBy'];
+            if (!empty($params['orderBy'])) {
+                $sortByField = $params['orderBy'];
                 $sortByFieldType = $this->getMetadata()->get(['entityDefs', $this->getEntityType(), 'fields', $sortByField, 'type']);
 
                 if ($sortByFieldType === 'currency') {

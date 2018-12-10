@@ -38,6 +38,7 @@ class Phone extends Base
                 'fields' => array(
                     $fieldName => array(
                         'select' => 'phoneNumbers.name',
+                        'fieldType' => 'phone',
                         'where' =>
                         array (
                             'LIKE' => \Espo\Core\Utils\Util::toUnderScore($entityName) . ".id IN (
@@ -130,33 +131,31 @@ class Phone extends Base
                         ]
                     ]
                 ),
-                'relations' => array(
-                    'phoneNumbers' => array(
+                'relations' => [
+                    'phoneNumbers' => [
                         'type' => 'manyMany',
                         'entity' => 'PhoneNumber',
                         'relationName' => 'entityPhoneNumber',
-                        'midKeys' => array(
-                            'entity_id',
-                            'phone_number_id',
-                        ),
-                        'conditions' => array(
-                            'entityType' => $entityName,
-                        ),
-                        'additionalColumns' => array(
-                            'entityType' => array(
+                        'midKeys' => [
+                            'entityId',
+                            'phoneNumberId'
+                        ],
+                        'conditions' => [
+                            'entityType' => $entityName
+                        ],
+                        'additionalColumns' => [
+                            'entityType' => [
                                 'type' => 'varchar',
-                                'len' => 100,
-                            ),
-                            'primary' => array(
+                                'len' => 100
+                            ],
+                            'primary' => [
                                 'type' => 'bool',
-                                'default' => false,
-                            ),
-                        ),
-                    ),
-                ),
-            ),
+                                'default' => false
+                            ]
+                        ]
+                    ]
+                ]
+            )
         );
     }
-
 }
-

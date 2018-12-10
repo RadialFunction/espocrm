@@ -69,7 +69,7 @@ class Admin extends \Espo\Core\Controllers\Base
     public function postActionUploadUpgradePackage($params, $data)
     {
         if ($this->getConfig()->get('restrictedMode')) {
-            if (!$this->getUser()->get('isSuperAdmin')) {
+            if (!$this->getUser()->isSuperAdmin()) {
                 throw new Forbidden();
             }
         }
@@ -87,7 +87,7 @@ class Admin extends \Espo\Core\Controllers\Base
     public function postActionRunUpgrade($params, $data)
     {
         if ($this->getConfig()->get('restrictedMode')) {
-            if (!$this->getUser()->get('isSuperAdmin')) {
+            if (!$this->getUser()->isSuperAdmin()) {
                 throw new Forbidden();
             }
         }
@@ -107,5 +107,11 @@ class Admin extends \Espo\Core\Controllers\Base
     {
         $adminNotificationManager = new \Espo\Core\Utils\AdminNotificationManager($this->getContainer());
         return $adminNotificationManager->getNotificationList();
+    }
+
+    public function actionSystemRequirementList($params)
+    {
+        $systemRequirementManager = new \Espo\Core\Utils\SystemRequirements($this->getContainer());
+        return $systemRequirementManager->getAllRequiredList();
     }
 }

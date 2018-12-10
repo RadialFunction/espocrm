@@ -134,7 +134,7 @@ Espo.define('views/import/step2', 'view', function (Dep) {
                 $cell = $('<td>').append($select);
                 $row.append($cell);
 
-                var value = d.value;
+                var value = d.value || '';
                 if (value.length > 200) {
                     value = value.substr(0, 200) + '...';
                 }
@@ -162,8 +162,12 @@ Espo.define('views/import/step2', 'view', function (Dep) {
         getFieldList: function () {
             var defs = this.getMetadata().get('entityDefs.' + this.scope + '.fields');
 
+            var forbiddenFieldList = this.getAcl().getScopeForbiddenFieldList(this.scope, 'edit');
+
             var fieldList = [];
             for (var field in defs) {
+                if (~forbiddenFieldList.indexOf(field)) continue;
+
                 var d = defs[field];
 
                 if (!~this.allowedFieldList.indexOf(field) && (d.disabled || d.importDisabled)) {
@@ -182,10 +186,14 @@ Espo.define('views/import/step2', 'view', function (Dep) {
         getAttributeList: function () {
             var fields = this.getMetadata().get(['entityDefs', this.scope, 'fields']) || {};
 
+            var forbiddenFieldList = this.getAcl().getScopeForbiddenFieldList(this.scope, 'edit');
+
             var attributeList = [];
             attributeList.push('id');
 
             for (var field in fields) {
+                if (~forbiddenFieldList.indexOf(field)) continue;
+
                 var d = fields[field];
                 if (!~this.allowedFieldList.indexOf(field) && (((d.disabled) && !d.importNotDisabled) || d.importDisabled)) {
                     continue;
@@ -299,7 +307,7 @@ Espo.define('views/import/step2', 'view', function (Dep) {
             this.notify('Loading...');
             var label = this.translate(name, 'fields', this.scope);
 
-            var removeLink = '<a href="javascript:" class="pull-right" data-action="removeField" data-name="'+name+'"><span class="glyphicon glyphicon-remove"></span></a>';
+            var removeLink = '<a href="javascript:" class="pull-right" data-action="removeField" data-name="'+name+'"><span class="fas fa-times"></span></a>';
 
             var html = '<div class="cell form-group col-sm-3">'+removeLink+'<label class="control-label">' + label + '</label><div class="field" data-name="'+name+'"/></div>';
             $('#default-values-container').append(html);
@@ -367,13 +375,13 @@ Espo.define('views/import/step2', 'view', function (Dep) {
                 return;
             }
 
-            var fields = [];
+            var attributeList = [];
 
             this.mapping.forEach(function (d, i) {
-                fields.push($('#column-' + i).val());
+                attributeList.push($('#column-' + i).val());
             }, this);
 
-            this.formData.fields = fields;
+            this.formData.attributeList = attributeList;
 
             if (~['update', 'createAndUpdate'].indexOf(this.formData.action)) {
                 var updateBy = [];

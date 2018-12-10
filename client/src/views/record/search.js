@@ -53,8 +53,8 @@ Espo.define('views/record/search', 'view', function (Dep) {
         textFilterDisabled: false,
 
         viewModeIconClassMap: {
-            list: 'glyphicon glyphicon-align-justify',
-            kanban: 'glyphicon glyphicon-equalizer icon-rotate-180'
+            list: 'fas fa-align-justify',
+            kanban: 'fas fa-align-left fa-rotate-90'
         },
 
         data: function () {
@@ -123,7 +123,9 @@ Espo.define('views/record/search', 'view', function (Dep) {
                 this.tryReady();
             }.bind(this));
 
-            this.presetFilterList = (Espo.Utils.clone(this.getMetadata().get('clientDefs.' + this.scope + '.filterList') || [])).filter(function (item) {
+            var filterList = this.options.filterList || this.getMetadata().get(['clientDefs', this.scope, 'filterList']) || [];
+
+            this.presetFilterList = Espo.Utils.clone(filterList).filter(function (item) {
                 if (typeof item === 'string') return true;
                 item = item || {};
                 if (item.inPortalDisabled && this.getUser().isPortal()) return false;
@@ -239,12 +241,12 @@ Espo.define('views/record/search', 'view', function (Dep) {
         },
 
         events: {
-            'keypress input[name="textFilter"]': function (e) {
+            'keypress input[data-name="textFilter"]': function (e) {
                 if (e.keyCode == 13) {
                     this.search();
                 }
             },
-            'focus input[name="textFilter"]': function (e) {
+            'focus input[data-name="textFilter"]': function (e) {
                 e.currentTarget.select();
             },
             'click button[data-action="search"]': function (e) {
@@ -255,7 +257,7 @@ Espo.define('views/record/search', 'view', function (Dep) {
                 var name = $target.data('name');
                 this.advanced[name] = {};
 
-                $target.closest('li').addClass('hide');
+                $target.closest('li').addClass('hidden');
 
                 this.presetName = this.primary;
 
@@ -273,7 +275,7 @@ Espo.define('views/record/search', 'view', function (Dep) {
                 var $target = $(e.currentTarget);
                 var name = $target.data('name');
 
-                this.$el.find('ul.filter-list li[data-name="' + name + '"]').removeClass('hide');
+                this.$el.find('ul.filter-list li[data-name="' + name + '"]').removeClass('hidden');
                 var container = this.getView('filter-' + name).$el.closest('div.filter');
                 this.clearView('filter-' + name);
                 container.remove();
@@ -460,7 +462,7 @@ Espo.define('views/record/search', 'view', function (Dep) {
 
         updateAddFilterButton: function () {
             var $ul = this.$el.find('ul.filter-list');
-            if ($ul.children().not('.hide').size() == 0) {
+            if ($ul.children().not('.hidden').not('.dropdown-header').length == 0) {
                 this.$el.find('button.add-filter-button').addClass('disabled');
             } else {
                 this.$el.find('button.add-filter-button').removeClass('disabled');
@@ -505,7 +507,7 @@ Espo.define('views/record/search', 'view', function (Dep) {
 
             var barContentHtml = '<'+tag+' href="javascript:" style="cursor: '+cursor+';" class="label label-'+style+'" data-action="'+action+'">' + label + '</'+tag+'>';
             if (id) {
-                barContentHtml += ' <a href="javascript:" title="'+this.translate('Remove')+'" class="small" data-action="removePreset" data-id="'+id+'"><span class="glyphicon glyphicon-remove"></span></a>';
+                barContentHtml += ' <a href="javascript:" title="'+this.translate('Remove')+'" class="small" data-action="removePreset" data-id="'+id+'"><span class="fas fa-times"></span></a>';
             }
             barContentHtml = '<span style="margin-right: 10px;">' + barContentHtml + '</span>'
 
@@ -584,7 +586,7 @@ Espo.define('views/record/search', 'view', function (Dep) {
 
             presetName = presetName || '';
 
-            this.$el.find('ul.filter-menu a.preset[data-name="'+presetName+'"]').prepend('<span class="glyphicon glyphicon-ok pull-right"></span>');
+            this.$el.find('ul.filter-menu a.preset[data-name="'+presetName+'"]').prepend('<span class="fas fa-check pull-right"></span>');
         },
 
         manageBoolFilters: function () {
@@ -705,7 +707,7 @@ Espo.define('views/record/search', 'view', function (Dep) {
             var rendered = false;
             if (this.isRendered()) {
                 rendered = true;
-                this.$advancedFiltersPanel.append('<div data-name="'+name+'" class="filter filter-' + name + ' col-sm-4 col-md-3" />');
+                this.$advancedFiltersPanel.append('<div data-name="'+name+'" class="filter filter-' + name + '" />');
             }
 
             this.createView('filter-' + name, 'views/search/filter', {
@@ -726,12 +728,12 @@ Espo.define('views/record/search', 'view', function (Dep) {
         },
 
         fetch: function () {
-            this.textFilter = (this.$el.find('input[name="textFilter"]').val() || '').trim();
+            this.textFilter = (this.$el.find('input[data-name="textFilter"]').val() || '').trim();
 
             this.bool = {};
 
             this.boolFilterList.forEach(function (name) {
-                this.bool[name] = this.$el.find('input[name="' + name + '"]').prop('checked');
+                this.bool[name] = this.$el.find('input[data-name="' + name + '"][data-role="boolFilterCheckbox"]').prop('checked');
             }, this);
 
             for (var field in this.advanced) {

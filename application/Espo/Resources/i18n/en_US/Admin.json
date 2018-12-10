@@ -23,6 +23,7 @@
         "Portals": "Portals",
         "Portal Roles": "Portal Roles",
         "Portal Users": "Portal Users",
+        "API Users": "API Users",
         "Outbound Emails": "Outbound Emails",
         "Group Email Accounts": "Group Email Accounts",
         "Personal Email Accounts": "Personal Email Accounts",
@@ -58,7 +59,17 @@
         "Email Filters": "Email Filters",
         "Action History": "Action History",
         "Label Manager": "Label Manager",
-        "Lead Capture": "Lead Capture"
+        "Template Manager": "Template Manager",
+        "Lead Capture": "Lead Capture",
+        "Attachments": "Attachments",
+        "System Requirements": "System Requirements",
+        "PHP Settings": "PHP Settings",
+        "Database Settings": "Database Settings",
+        "Permissions": "Permissions",
+        "Success": "Success",
+        "Fail": "Fail",
+        "is recommended": "is recommended",
+        "extension is missing": "extension is missing"
     },
     "layouts": {
         "list": "List",
@@ -140,6 +151,7 @@
         "noEmptyString": "Empty string value is not allowed",
         "defaultType": "Default Type",
         "seeMoreDisabled": "Disable Text Cut",
+        "cutHeight": "Cut Height (px)",
         "entityList": "Entity List",
         "isSorted": "Is Sorted (alphabetically)",
         "audited": "Audited",
@@ -164,7 +176,10 @@
         "maxFileSize": "Max File Size (Mb)",
         "isPersonalData": "Is Personal Data",
         "useIframe": "Use Iframe",
-        "useNumericFormat": "Use Numeric Format"
+        "useNumericFormat": "Use Numeric Format",
+        "strip": "Strip",
+        "minuteStep": "Minutes Step",
+        "inlineEditDisabled": "Disable Inline Edit"
     },
     "messages": {
         "upgradeVersion": "EspoCRM will be upgraded to version <strong>{version}</strong>. Please be patient as this may take a while.",
@@ -214,8 +229,12 @@
         "emailFilters": "Email messages that match the specified filter won't be imported.",
         "actionHistory": "Log of user actions.",
         "labelManager": "Customize application labels.",
+        "templateManager": "Customize message templates.",
         "authLog": "Login history.",
-        "leadCapture": "API entry points for Web-to-Lead."
+        "leadCapture": "API entry points for Web-to-Lead.",
+        "attachments": "All file attachments stored in the system.",
+        "systemRequirements": "System Requirements for EspoCRM.",
+        "apiUsers": "Separate users for integration purposes."
     },
     "options": {
         "previewSize": {
@@ -229,5 +248,26 @@
         "and": "AND",
         "or": "OR",
         "not": "NOT"
+    },
+    "systemRequirements": {
+        "requiredPhpVersion": "PHP Version",
+        "requiredMysqlVersion": "MySQL Version",
+        "requiredMariadbVersion": "MariaDB version",
+        "host": "Host Name",
+        "dbname": "Database Name",
+        "user": "User Name",
+        "writable": "Writable",
+        "readable": "Readable"
+    },
+    "templates": {
+        "accessInfo": "Access Info",
+        "accessInfoPortal": "Access Info for Portals",
+        "assignment": "Assignment",
+        "mention": "Mention",
+        "noteEmailRecieved": "Note about Recieved Email",
+        "notePost": "Note about Post",
+        "notePostNoParent": "Note about Post (no Parent)",
+        "noteStatus": "Note about Status Update",
+        "passwordChangeLink": "Password Change Link"
     }
 }

@@ -220,8 +220,7 @@ Espo.define(
                 this.viewHelper.layoutManager.userId = this.user.id;
 
                 if (this.themeManager.isUserTheme()) {
-                    var stylesheetPath = this.basePath + this.themeManager.getStylesheet();
-                    $('#main-stylesheet').attr('href', stylesheetPath);
+                    this.loadStylesheet();
                 }
 
                 var promiseList = [];
@@ -264,7 +263,8 @@ Espo.define(
         },
 
         initRouter: function () {
-            this.router = new Router();
+            var routes = this.metadata.get(['app', 'clientRoutes']) || {};
+            this.router = new Router({routes: routes});
             this.viewHelper.router = this.router;
             this.baseController.setRouter(this.router);
             this.router.confirmLeaveOutMessage = this.language.translate('confirmLeaveOutMessage', 'messages');
@@ -293,6 +293,7 @@ Espo.define(
                     controller.doAction(params.action, params.options);
                     this.trigger('action:done');
                 } catch (e) {
+                    console.log(e);
                     switch (e.name) {
                         case 'AccessDenied':
                             this.baseController.error403();
@@ -406,6 +407,9 @@ Espo.define(
                 var path = null;
                 switch (type) {
                     case 'template':
+                        if (~name.indexOf('.')) {
+                            console.warn(name + ': template name should use slashes for a directory separator.');
+                        }
                         path = 'res/templates/' + name.split('.').join('/') + '.tpl';
                         break;
                     case 'layoutTemplate':
@@ -503,6 +507,16 @@ Espo.define(
             xhr.setRequestHeader('Authorization', 'Basic ' + Base64.encode('**logout:logout'));
             xhr.send('');
             xhr.abort();
+
+
+            this.loadStylesheet();
+        },
+
+        loadStylesheet: function () {
+            if (!this.metadata.get(['themes'])) return;
+
+            var stylesheetPath = this.basePath + this.themeManager.getStylesheet();
+            $('#main-stylesheet').attr('href', stylesheetPath);
         },
 
         setCookieAuth: function (username, token) {

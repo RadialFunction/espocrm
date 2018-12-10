@@ -32,7 +32,7 @@ namespace Espo\Core;
 class Container
 {
 
-    private $data = array();
+    private $data = [];
 
 
     /**
@@ -178,7 +178,7 @@ class Container
 
     protected function loadMailSender()
     {
-        $className = $this->getServiceClassName('mailSernder', '\\Espo\\Core\\Mail\\Sender');
+        $className = $this->getServiceClassName('mailSender', '\\Espo\\Core\\Mail\\Sender');
         return new $className(
             $this->get('config'),
             $this->get('entityManager')
@@ -222,6 +222,13 @@ class Container
         );
     }
 
+    protected function loadNotificatorFactory()
+    {
+        return new \Espo\Core\NotificatorFactory(
+            $this
+        );
+    }
+
     protected function loadMetadata()
     {
         return new \Espo\Core\Utils\Metadata(
@@ -240,6 +247,14 @@ class Container
     }
 
     protected function loadAclManager()
+    {
+        $className = $this->getServiceClassName('acl', '\\Espo\\Core\\AclManager');
+        return new $className(
+            $this->get('container')
+        );
+    }
+
+    protected function loadInternalAclManager()
     {
         $className = $this->getServiceClassName('acl', '\\Espo\\Core\\AclManager');
         return new $className(

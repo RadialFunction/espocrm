@@ -62,13 +62,13 @@ Espo.define('views/fields/datetime', 'views/fields/date', function (Dep) {
             }
             var value = this.model.get(this.name);
             if (!value) {
-                if (this.mode == 'edit' || this.mode == 'search' || this.mode === 'list') {
+                if (this.mode == 'edit' || this.mode == 'search' || this.mode === 'list' || this.mode == 'listLink') {
                     return '';
                 }
                 return this.translate('None');
             }
 
-            if (this.mode == 'list' || this.mode == 'detail') {
+            if (this.mode == 'list' || this.mode == 'detail' || this.mode == 'listLink') {
                 if (this.getConfig().get('readableDateFormatDisabled') || this.params.useNumericFormat) {
                     return this.getDateTime().toDisplayDateTime(value);
                 }
@@ -106,7 +106,7 @@ Espo.define('views/fields/datetime', 'views/fields/date', function (Dep) {
         initTimepicker: function () {
             var $time = this.$time;
             $time.timepicker({
-                step: 30,
+                step: this.params.minuteStep || 30,
                 scrollDefaultNow: true,
                 timeFormat: this.timeFormatMap[this.getDateTime().timeFormat]
             });
@@ -128,7 +128,7 @@ Espo.define('views/fields/datetime', 'views/fields/date', function (Dep) {
 
             if (this.mode == 'edit') {
                 var $date = this.$date = this.$element;
-                var $time = this.$time = this.$el.find('input[name="' + this.name + '-time"]');
+                var $time = this.$time = this.$el.find('input.time-part');
                 this.initTimepicker();
 
                 this.$element.on('change.datetime', function (e) {
@@ -171,8 +171,8 @@ Espo.define('views/fields/datetime', 'views/fields/date', function (Dep) {
         fetch: function () {
             var data = {};
 
-            var date = this.$el.find('[name="' + this.name + '"]').val();
-            var time = this.$el.find('[name="' + this.name + '-time"]').val();
+            var date = this.$date.val();
+            var time = this.$time.val();
 
             var value = null;
             if (date != '' && time != '') {
@@ -201,4 +201,3 @@ Espo.define('views/fields/datetime', 'views/fields/date', function (Dep) {
 
     });
 });
-

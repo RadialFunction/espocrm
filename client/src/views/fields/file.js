@@ -285,7 +285,7 @@ Espo.define('views/fields/file', 'views/fields/link', function (Dep) {
                 if (this.showPreview && ~this.previewTypeList.indexOf(type)) {
                     string = '<div class="attachment-preview">' + this.getDetailPreview(name, type, id) + '</div>';
                 } else {
-                    string = '<span class="glyphicon glyphicon-paperclip small"></span> <a href="'+ this.getDownloadUrl(id) +'" target="_BLANK">' + Handlebars.Utils.escapeExpression(name) + '</a>';
+                    string = '<span class="fas fa-paperclip text-soft small"></span> <a href="'+ this.getDownloadUrl(id) +'" target="_BLANK">' + Handlebars.Utils.escapeExpression(name) + '</a>';
                 }
                 return string;
             }
@@ -419,7 +419,7 @@ Espo.define('views/fields/file', 'views/fields/link', function (Dep) {
 
             var self = this;
 
-            var removeLink = '<a href="javascript:" class="remove-attachment pull-right"><span class="glyphicon glyphicon-remove"></span></a>';
+            var removeLink = '<a href="javascript:" class="remove-attachment pull-right"><span class="fas fa-times"></span></a>';
 
             var preview = name;
             if (this.showPreview && id) {

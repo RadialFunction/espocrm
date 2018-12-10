@@ -210,7 +210,7 @@ Espo.define('views/fields/link-multiple-with-columns', 'views/fields/link-multip
             var $el = $('<div class="form-inline list-group-item link-with-role link-group-item-with-columns clearfix">').addClass('link-' + id);
 
             var nameHtml = '<div class="link-item-name">' + this.getHelper().stripTags(name) + '&nbsp;' + '</div>';
-            var removeHtml = '<a href="javascript:" class="pull-right" data-id="' + id + '" data-action="clearLink"><span class="glyphicon glyphicon-remove"></a>';
+            var removeHtml = '<a href="javascript:" class="pull-right" data-id="' + id + '" data-action="clearLink"><span class="fas fa-times"></a>';
 
             var columnFormElementJQList = [];
             var columnMenuItemJQList = [];
@@ -238,7 +238,7 @@ Espo.define('views/fields/link-multiple-with-columns', 'views/fields/link-multip
                     var label = this.translate(field, 'fields', scope);
                     var $menuItem = $('<li>').append(
                         $('<a href="javascript:" data-action="toggleBoolColumn">').attr('data-column', column).attr('data-id', id).append(
-                            $('<span class="check-icon glyphicon glyphicon-ok pull-right">').addClass(!value ? 'hidden' : '')
+                            $('<span class="check-icon fas fa-check fa-sm pull-right">').addClass(!value ? 'hidden' : '')
                         ).append(
                             $('<div>').text(label)
                         )
@@ -282,7 +282,7 @@ Espo.define('views/fields/link-multiple-with-columns', 'views/fields/link-multip
             if (this.mode == 'edit') {
                 columnFormElementJQList.forEach(function ($column) {
                     var fetch = function ($target) {
-                        if (!$target || !$target.size()) return;
+                        if (!$target || !$target.length) return;
                         var column = $target.data('column');
                         var value = $target.val().toString().trim();
                         var id = $target.data('id');

@@ -9,7 +9,6 @@
             "type": "enum",
             "options": ["Planned", "Held", "Not Held"],
             "default": "Planned",
-            "view": "views/fields/enum-styled",
             "style": {
                 "Held": "success"
             },
@@ -89,6 +88,7 @@
             "columns": {
                 "status": "acceptanceStatus"
             },
+            "additionalAttributeList": ["columns"],
             "orderBy": "name"
         },
         "contacts": {
@@ -99,6 +99,7 @@
             "columns": {
                 "status": "acceptanceStatus"
             },
+            "additionalAttributeList": ["columns"],
             "orderBy": "name"
         },
         "leads": {
@@ -109,6 +110,7 @@
             "columns": {
                 "status": "acceptanceStatus"
             },
+            "additionalAttributeList": ["columns"],
             "orderBy": "name"
         },
         "createdAt": {
@@ -204,8 +206,8 @@
         }
     },
     "collection": {
-        "sortBy": "dateStart",
-        "asc": false
+        "orderBy": "dateStart",
+        "order": "desc"
     },
     "indexes": {
         "dateStartStatus": {

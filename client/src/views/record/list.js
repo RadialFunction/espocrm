@@ -73,6 +73,8 @@ Espo.define('views/record/list', 'view', function (Dep) {
 
         portalLayoutDisabled: false,
 
+        dropdownItemList: [],
+
         events: {
             'click a.link': function (e) {
                 e.stopPropagation();
@@ -135,19 +137,12 @@ Espo.define('views/record/list', 'view', function (Dep) {
                 this.selectAllHandler(e.currentTarget.checked);
             },
             'click .action': function (e) {
-                var $el = $(e.currentTarget);
-                var action = $el.data('action');
-                var method = 'action' + Espo.Utils.upperCaseFirst(action);
-                if (typeof this[method] == 'function') {
-                    var data = $el.data();
-                    this[method](data, e);
-                    e.preventDefault();
-                }
+                Espo.Utils.handleAction(this, e);
             },
             'click .checkbox-dropdown [data-action="selectAllResult"]': function (e) {
                 this.selectAllResult();
             },
-            'click .actions a.mass-action': function (e) {
+            'click .actions-menu a.mass-action': function (e) {
                 $el = $(e.currentTarget);
                 var action = $el.data('action');
 
@@ -160,32 +155,131 @@ Espo.define('views/record/list', 'view', function (Dep) {
             }
         },
 
-        toggleSort: function (field) {
+        toggleSort: function (orderBy) {
             var asc = true;
-            if (field === this.collection.sortBy && this.collection.asc) {
+            if (orderBy === this.collection.orderBy && this.collection.order === 'asc') {
                 asc = false;
             }
+            var order = asc ? 'asc' : 'desc';
+
             this.notify('Please wait...');
             this.collection.once('sync', function () {
                 this.notify(false);
-                this.trigger('sort', {sortBy: field, asc: asc});
+                this.trigger('sort', {orderBy: orderBy, order: order});
             }, this);
+
             var maxSizeLimit = this.getConfig().get('recordListMaxSizeLimit') || 200;
             while (this.collection.length > maxSizeLimit) {
                 this.collection.pop();
             }
-            this.collection.sort(field, asc);
+            this.collection.sort(orderBy, order);
             this.deactivate();
+        },
+
+        initStickedBar: function () {
+            var $stickedBar = this.$stickedBar = this.$el.find('.sticked-bar');
+            var $middle = this.$el.find('> .list');
+            var $window = $(window);
+            var $scrollable = $window;
+
+            this.on('render', function () {
+                this.$stickedBar = null;
+            }, this);
+
+            var screenWidthXs = this.getThemeManager().getParam('screenWidthXs');
+
+            function getOffsetTop (element) {
+                var offsetTop = 0;
+                do {
+                    if (element.classList.contains('modal-body')) break;
+                    if (!isNaN(element.offsetTop)) {
+                        offsetTop += element.offsetTop;
+                    }
+                } while (element = element.offsetParent);
+                return offsetTop;
+            }
+
+            var top;
+
+            if (this.$el.closest('.modal-body').length) {
+                $scrollable = this.$el.closest('.modal-body');
+                top = 0;
+            } else {
+                top = getOffsetTop(this.getParentView().$el.get(0));
+                if ($(window.document).width() < screenWidthXs) {
+                    top = 0;
+                }
+            }
+
+            top += this.$el.find('.list-buttons-container').height();
+
+            var topBarHeight = this.getThemeManager().getParam('navbarHeight') || 30;
+
+            $scrollable.off('scroll.list-' + this.cid);
+            $scrollable.on('scroll.list-' + this.cid, function (e) {
+                cotrolSticking();
+            }.bind(this));
+
+            $window.off('resize.list-' + this.cid);
+            $window.on('resize.list-' + this.cid, function (e) {
+                cotrolSticking();
+            }.bind(this));
+
+            this.on('check', function () {
+                if (this.checkedList.length === 0 && !this.allResultIsChecked) return;
+                cotrolSticking();
+            }, this);
+
+            this.once('remove', function () {
+                $scrollable.off('scroll.list-' + this.cid);
+                $window.off('resize.list-' + this.cid);
+            });
+
+            var cotrolSticking = function () {
+                if (this.checkedList.length === 0 && !this.allResultIsChecked) return;
+
+                var middleTop = getOffsetTop($middle.get(0));
+
+                var stickTop = middleTop - top;
+                var edge = middleTop + $middle.outerHeight(true);
+                var scrollTop = $scrollable.scrollTop();
+
+                if (scrollTop < edge) {
+                    if (scrollTop > stickTop) {
+                        $stickedBar.removeClass('hidden');
+                    } else {
+                        $stickedBar.addClass('hidden');
+                    }
+                } else {
+                    $stickedBar.removeClass('hidden');
+                }
+            }.bind(this);
+        },
+
+        showActions: function () {
+            this.$el.find('.actions-button').removeClass('hidden');
+
+            if (!this.options.stickedBarDisabled && !this.stickedBarDisabled && this.massActionList.length) {
+                if (!this.$stickedBar) {
+                    this.initStickedBar();
+                }
+            }
+        },
+
+        hideActions: function () {
+            this.$el.find('.actions-button').addClass('hidden');
+
+            if (this.$stickedBar) {
+                this.$stickedBar.addClass('hidden');
+            }
         },
 
         selectAllHandler: function (isChecked) {
             this.checkedList = [];
 
-            var $actionsButton = this.$el.find('.actions-button');
-
             if (isChecked) {
                 this.$el.find('input.record-checkbox').prop('checked', true);
-                $actionsButton.removeAttr('disabled');
+                this.showActions();
                 this.collection.models.forEach(function (model) {
                     this.checkedList.push(model.id);
                 }, this);
@@ -195,7 +289,7 @@ Espo.define('views/record/list', 'view', function (Dep) {
                     this.unselectAllResult();
                 }
                 this.$el.find('input.record-checkbox').prop('checked', false);
-                $actionsButton.attr('disabled', true);
+                this.hideActions();
                 this.$el.find('.list > table tbody tr').removeClass('active');
             }
 
@@ -239,11 +333,12 @@ Espo.define('views/record/list', 'view', function (Dep) {
         allResultIsChecked: false,
 
         data: function () {
-
             var paginationTop = this.pagination === 'both' || this.pagination === true || this.pagination === 'top';
             var paginationBottom = this.pagination === 'both' || this.pagination === true || this.pagination === 'bottom';
+
             return {
                 scope: this.scope,
+                entityType: this.entityType,
                 header: this.header,
                 headerDefs: this._getHeaderDefs(),
                 paginationEnabled: this.pagination,
@@ -256,11 +351,13 @@ Espo.define('views/record/list', 'view', function (Dep) {
                 checkboxes: this.checkboxes,
                 massActionList: this.massActionList,
                 rowList: this.rowList,
-                topBar: paginationTop || this.checkboxes || (this.buttonList.length && !this.buttonsDisabled),
+                topBar: paginationTop || this.checkboxes || (this.buttonList.length && !this.buttonsDisabled) || (this.dropdownItemList.length && !this.buttonsDisabled),
                 bottomBar: paginationBottom,
                 checkAllResultDisabled: this.checkAllResultDisabled,
                 buttonList: this.buttonList,
-                displayTotalCount: this.displayTotalCount && this.collection.total > 0
+                dropdownItemList: this.dropdownItemList,
+                displayTotalCount: this.displayTotalCount && this.collection.total > 0,
+                displayActionsButtonGroup: this.checkboxes || this.massActionList || this.buttonList.length || this.dropdownItemList.length,
             };
         },
 
@@ -291,6 +388,8 @@ Espo.define('views/record/list', 'view', function (Dep) {
 
             this.rowActionsDisabled = this.options.rowActionsDisabled || this.rowActionsDisabled;
 
+            this.dropdownItemList = Espo.Utils.cloneDeep(this.options.dropdownItemList || this.dropdownItemList);
+
             if ('buttonsDisabled' in this.options) {
                 this.buttonsDisabled = this.options.buttonsDisabled;
             }
@@ -312,12 +411,12 @@ Espo.define('views/record/list', 'view', function (Dep) {
 
             this.massActionList.forEach(function(item) {
                 if (!~this.checkAllResultMassActionList.indexOf(item)) {
-                    this.$el.find('div.list-buttons-container .actions li a.mass-action[data-action="'+item+'"]').parent().addClass('hidden');
+                    this.$el.find('div.list-buttons-container .actions-menu li a.mass-action[data-action="'+item+'"]').parent().addClass('hidden');
                 }
             }, this);
 
             if (this.checkAllResultMassActionList.length) {
-                this.$el.find('.actions-button').removeAttr('disabled');
+                this.showActions();
             }
 
             this.$el.find('.list > table tbody tr').removeClass('active');
@@ -334,7 +433,7 @@ Espo.define('views/record/list', 'view', function (Dep) {
 
             this.massActionList.forEach(function(item) {
                 if (!~this.checkAllResultMassActionList.indexOf(item)) {
-                    this.$el.find('div.list-buttons-container .actions li a.mass-action[data-action="'+item+'"]').parent().removeClass('hidden');
+                    this.$el.find('div.list-buttons-container .actions-menu li a.mass-action[data-action="'+item+'"]').parent().removeClass('hidden');
                 }
             }, this);
         },
@@ -704,6 +803,11 @@ Espo.define('views/record/list', 'view', function (Dep) {
             if (~index) {
                 this.massActionList.splice(index, 1);
             }
+
+            var index = this.checkAllResultMassActionList.indexOf(item);
+            if (~index) {
+                this.checkAllResultMassActionList.splice(index, 1);
+            }
         },
 
         addMassAction: function (item, allResult) {
@@ -715,7 +819,7 @@ Espo.define('views/record/list', 'view', function (Dep) {
 
         setup: function () {
             if (typeof this.collection === 'undefined') {
-                throw new Error('Collection has not been injected into Record.List view.');
+                throw new Error('Collection has not been injected into views/record/list view.');
             }
 
             this.layoutLoadCallbackList = [];
@@ -791,6 +895,10 @@ Espo.define('views/record/list', 'view', function (Dep) {
                 this.getAcl().get('exportPermission') === 'no'
             ) {
                 this.removeMassAction('export');
+            }
+
+            if (this.getAcl().get('massUpdatePermission') !== 'yes') {
+                this.removeMassAction('massUpdate');
             }
 
             if (
@@ -989,9 +1097,9 @@ Espo.define('views/record/list', 'view', function (Dep) {
                     item.hasCustomLabel = true;
                 }
                 if (item.sortable) {
-                    item.sorted = this.collection.sortBy === this.listLayout[i].name;
+                    item.sorted = this.collection.orderBy === this.listLayout[i].name;
                     if (item.sorted) {
-                        item.asc = this.collection.asc;
+                        item.asc = this.collection.order === 'asc' ;
                     }
                 }
                 defs.push(item);
@@ -1060,7 +1168,7 @@ Espo.define('views/record/list', 'view', function (Dep) {
         checkRecord: function (id, $target, isSilent) {
             $target = $target || this.$el.find('.record-checkbox[data-id="' + id + '"]');
 
-            if (!$target.size()) return;
+            if (!$target.length) return;
 
             $target.get(0).checked = true;
 
@@ -1094,9 +1202,9 @@ Espo.define('views/record/list', 'view', function (Dep) {
 
         handleAfterCheck: function (isSilent) {
             if (this.checkedList.length) {
-                this.$el.find('.actions-button').removeAttr('disabled');
+                this.showActions();
             } else {
-                this.$el.find('.actions-button').attr('disabled', true);
+                this.hideActions();
             }
 
             if (this.checkedList.length == this.collection.models.length) {
@@ -1493,12 +1601,14 @@ Espo.define('views/record/list', 'view', function (Dep) {
                 this.collection.remove(model);
                 this.notify('Removing...');
                 model.destroy({
+                    wait: true,
                     success: function () {
                         this.notify('Removed', 'success');
                         this.removeRecordFromList(id);
                     }.bind(this),
                     error: function () {
                         this.notify('Error occured', 'error');
+                        this.collection.push(model);
                     }.bind(this)
                 });
             }, this);

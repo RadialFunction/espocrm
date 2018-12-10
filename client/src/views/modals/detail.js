@@ -74,12 +74,10 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
 
             this.layoutName = this.options.layoutName || this.layoutName;
 
-            if (!this.removeDisabled) {
-                this.addRemoveButton();
-            }
+            this.setupRecordButtons();
 
-            if (!this.editDisabled) {
-                this.addEditButton();
+            if (this.model) {
+                this.controlRecordButtonsVisibility();
             }
 
             if (!this.fullFormDisabled) {
@@ -97,16 +95,18 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
             if (this.model && this.model.collection && !this.navigateButtonsDisabled) {
                 this.buttonList.push({
                     name: 'previous',
-                    html: '<span class="glyphicon glyphicon-chevron-left"></span>',
+                    html: '<span class="fas fa-chevron-left"></span>',
                     title: this.translate('Previous Entry'),
                     pullLeft: true,
+                    className: 'btn-icon',
                     disabled: true
                 });
                 this.buttonList.push({
                     name: 'next',
-                    html: '<span class="glyphicon glyphicon-chevron-right"></span>',
+                    html: '<span class="fas fa-chevron-right"></span>',
                     title: this.translate('Next Entry'),
                     pullLeft: true,
+                    className: 'btn-icon',
                     disabled: true
                 });
                 this.indexOfRecord = this.model.collection.indexOf(this.model);
@@ -129,7 +129,9 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
                     this.listenToOnce(this.model, 'sync', function () {
                         this.createRecordView();
                     }, this);
-                    this.model.fetch();
+                    this.model.fetch().then(function () {
+                        this.controlRecordButtonsVisibility();
+                    }.bind(this));
                 } else {
                     this.model = this.sourceModel.clone();
                     this.model.collection = this.sourceModel.collection;
@@ -139,7 +141,9 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
                     }, this);
 
                     this.once('after:render', function () {
-                        this.model.fetch();
+                        this.model.fetch().then(function () {
+                        this.controlRecordButtonsVisibility();
+                    }.bind(this));
                     }, this);
                     this.createRecordView();
                 }
@@ -148,6 +152,30 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
             this.listenToOnce(this.getRouter(), 'routed', function () {
                 this.remove();
             }, this);
+        },
+
+        setupRecordButtons: function () {
+            if (!this.removeDisabled) {
+                this.addRemoveButton();
+            }
+
+            if (!this.editDisabled) {
+                this.addEditButton();
+            }
+        },
+
+        controlRecordButtonsVisibility: function () {
+            if (this.getAcl().check(this.model, 'edit')) {
+                this.showButton('edit');
+            } else {
+                this.hideButton('edit');
+            }
+
+            if (this.getAcl().check(this.model, 'delete')) {
+                this.showButton('remove');
+            } else {
+                this.hideButton('remove');
+            }
         },
 
         addEditButton: function () {
@@ -320,7 +348,9 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
             }, this);
 
             this.once('after:render', function () {
-                this.model.fetch();
+                this.model.fetch().then(function () {
+                    this.controlRecordButtonsVisibility();
+                }.bind(this));
             }, this);
 
             this.createRecordView(function () {
@@ -368,6 +398,7 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
             var viewName = this.getMetadata().get(['clientDefs', this.scope, 'modalViews', 'edit']) || 'views/modals/edit';
             this.createView('quickEdit', viewName, {
                 scope: this.scope,
+                entityType: this.model.entityType,
                 id: this.id,
                 fullFormDisabled: this.fullFormDisabled
             }, function (view) {

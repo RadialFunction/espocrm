@@ -38,6 +38,7 @@ class Email extends Base
                 'fields' => array(
                     $fieldName => array(
                         'select' => 'emailAddresses.name',
+                        'fieldType' => 'email',
                         'where' =>
                         array (
                             'LIKE' => \Espo\Core\Utils\Util::toUnderScore($entityName) . ".id IN (
@@ -88,35 +89,43 @@ class Email extends Base
                     $fieldName .'IsOptedOut' => array(
                         'type' => 'bool',
                         'notStorable' => true,
-                        'select' => 'emailAddresses.opt_out'
+                        'select' => 'emailAddresses.opt_out',
+                        'where' => [
+                            '= TRUE' => [
+                                'sql' => 'emailAddresses.opt_out = true AND emailAddresses.opt_out IS NOT NULL'
+                            ],
+                            '= FALSE' => [
+                                'sql' => 'emailAddresses.opt_out = false OR emailAddresses.opt_out IS NULL'
+                            ]
+                        ],
+                        'orderBy' => 'emailAddresses.opt_out {direction}'
                     )
                 ),
-                'relations' => array(
-                    'emailAddresses' => array(
+                'relations' => [
+                    'emailAddresses' => [
                         'type' => 'manyMany',
                         'entity' => 'EmailAddress',
                         'relationName' => 'entityEmailAddress',
-                        'midKeys' => array(
-                            'entity_id',
-                            'email_address_id',
-                        ),
-                        'conditions' => array(
-                            'entityType' => $entityName,
-                        ),
-                        'additionalColumns' => array(
-                            'entityType' => array(
+                        'midKeys' => [
+                            'entityId',
+                            'emailAddressId'
+                        ],
+                        'conditions' => [
+                            'entityType' => $entityName
+                        ],
+                        'additionalColumns' => [
+                            'entityType' => [
                                 'type' => 'varchar',
-                                'len' => 100,
-                            ),
-                            'primary' => array(
+                                'len' => 100
+                            ],
+                            'primary' => [
                                 'type' => 'bool',
-                                'default' => false,
-                            ),
-                        ),
-                    ),
-                ),
-            ),
+                                'default' => false
+                            ]
+                        ]
+                    ]
+                ]
+            )
         );
     }
-
 }

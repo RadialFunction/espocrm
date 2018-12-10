@@ -104,7 +104,8 @@ Espo.define('crm:views/dashlets/calendar', 'views/dashlets/abstract/base', funct
             this.actionList.unshift({
                 name: 'viewCalendar',
                 html: this.translate('View Calendar', 'labels', 'Calendar'),
-                url: '#Calendar'
+                url: '#Calendar',
+                iconHtml: '<span class="far fa-calendar-alt"></span>'
             });
         },
 
@@ -112,11 +113,11 @@ Espo.define('crm:views/dashlets/calendar', 'views/dashlets/abstract/base', funct
             if (this.getOption('mode') !== 'timeline') {
                 this.buttonList.push({
                     name: 'previous',
-                    html: '<span class="glyphicon glyphicon-chevron-left"></span>',
+                    html: '<span class="fas fa-chevron-left"></span>',
                 });
                 this.buttonList.push({
                     name: 'next',
-                    html: '<span class="glyphicon glyphicon-chevron-right"></span>',
+                    html: '<span class="fas fa-chevron-right"></span>',
                 });
             }
         },

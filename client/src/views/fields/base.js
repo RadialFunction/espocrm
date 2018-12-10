@@ -66,6 +66,8 @@ Espo.define('views/fields/base', 'view', function (Dep) {
 
         initialAttributes: null,
 
+        VALIDATION_POPOVER_TIMEOUT: 3000,
+
         isRequired: function () {
             return this.params.required;
         },
@@ -76,6 +78,10 @@ Espo.define('views/fields/base', 'view', function (Dep) {
          */
         getCellElement: function () {
             return this.$el.parent();
+        },
+
+        isInlineEditMode: function () {
+            return !!this._isInlineEditMode;
         },
 
         setDisabled: function (locked) {
@@ -126,6 +132,10 @@ Espo.define('views/fields/base', 'view', function (Dep) {
                 this.readOnlyLocked = true;
             }
             if (this.mode == 'edit') {
+                if (this.isInlineEditMode()) {
+                    this.inlineEditClose();
+                    return;
+                }
                 this.setMode('detail');
                 if (this.isRendered()) {
                     this.reRender();
@@ -143,7 +153,7 @@ Espo.define('views/fields/base', 'view', function (Dep) {
          * {jQuery}
          */
         getLabelElement: function () {
-            if (!this.$label || !this.$label.size()) {
+            if (!this.$label || !this.$label.length) {
                 this.$label = this.$el.parent().children('label');
             }
             return this.$label;
@@ -192,6 +202,26 @@ Espo.define('views/fields/base', 'view', function (Dep) {
             return this.model.get(this.name);
         },
 
+        isReadMode: function () {
+            return this.mode === 'list' || this.mode === 'detail' || this.mode === 'listLink';
+        },
+
+        isListMode: function () {
+            return this.mode === 'list' || this.mode === 'listLink';
+        },
+
+        isDetailMode: function () {
+            return this.mode === 'detail';
+        },
+
+        isEditMode: function () {
+            return this.mode === 'edit';
+        },
+
+        isSearchMode: function () {
+            return this.mode === 'search';
+        },
+
         setMode: function (mode) {
             this.mode = mode;
             var property = mode + 'Template';
@@ -219,6 +249,12 @@ Espo.define('views/fields/base', 'view', function (Dep) {
                 if (!(name in this.params)) {
                     this.params[name] = this.model.getFieldParam(this.name, name) || null;
                 }
+            }, this);
+
+            var additionaParamList = ['inlineEditDisabled'];
+
+            additionaParamList.forEach(function (item) {
+                this.params[item] = this.model.getFieldParam(this.name, item) || null;
             }, this);
 
             this.mode = this.options.mode || this.mode;
@@ -278,7 +314,7 @@ Espo.define('views/fields/base', 'view', function (Dep) {
             if ((this.mode == 'detail' || this.mode == 'edit') && this.tooltip) {
                 var $a;
                 this.once('after:render', function () {
-                    $a = $('<a href="javascript:" class="text-muted"><span class="glyphicon glyphicon-info-sign"></span></a>');
+                    $a = $('<a href="javascript:" class="text-muted field-info"><span class="fas fa-info-circle"></span></a>');
                     var $label = this.getLabelElement();
                     $label.append(' ');
                     this.getLabelElement().append($a);
@@ -340,7 +376,7 @@ Espo.define('views/fields/base', 'view', function (Dep) {
             var $label = this.getLabelElement();
             var $sign = $label.find('span.required-sign');
 
-            if ($label.size() && !$sign.size()) {
+            if ($label.length && !$sign.length) {
                 $text = $label.find('span.label-text');
                 $('<span class="required-sign"> *</span>').insertAfter($text);
                 $sign = $label.find('span.required-sign');
@@ -372,9 +408,9 @@ Espo.define('views/fields/base', 'view', function (Dep) {
 
         initInlineEdit: function () {
             var $cell = this.getCellElement();
-            var $editLink = $('<a href="javascript:" class="pull-right inline-edit-link hidden"><span class="glyphicon glyphicon-pencil"></span></a>');
+            var $editLink = $('<a href="javascript:" class="pull-right inline-edit-link hidden"><span class="fas fa-pencil-alt fa-sm"></span></a>');
 
-            if ($cell.size() == 0) {
+            if ($cell.length == 0) {
                 this.listenToOnce(this, 'after:render', this.initInlineEdit, this);
                 return;
             }
@@ -402,7 +438,13 @@ Espo.define('views/fields/base', 'view', function (Dep) {
         },
 
         initElement: function () {
-            this.$element = this.$el.find('[name="' + this.name + '"]');
+            this.$element = this.$el.find('[data-name="' + this.name + '"]');
+            if (!this.$element.length) {
+                this.$element = this.$el.find('[name="' + this.name + '"]');
+            }
+            if (!this.$element.length) {
+                this.$element = this.$el.find('.main-element');
+            }
             if (this.mode == 'edit') {
                 this.$element.on('change', function () {
                     this.trigger('change');
@@ -494,6 +536,8 @@ Espo.define('views/fields/base', 'view', function (Dep) {
 
         inlineEditClose: function (dontReset) {
             this.trigger('inline-edit-off');
+            this._isInlineEditMode = false;
+
             if (this.mode != 'edit') {
                 return;
             }
@@ -507,7 +551,7 @@ Espo.define('views/fields/base', 'view', function (Dep) {
                 this.model.set(this.initialAttributes);
             }
 
-            this.render();
+            this.reRender(true);
         },
 
         inlineEdit: function () {
@@ -522,7 +566,9 @@ Espo.define('views/fields/base', 'view', function (Dep) {
                 this.addInlineEditLinks();
             }, this);
 
-            this.render();
+            this._isInlineEditMode = true;
+
+            this.reRender(true);
             this.trigger('inline-edit-on');
         },
 
@@ -537,7 +583,7 @@ Espo.define('views/fields/base', 'view', function (Dep) {
                 $el = $(target);
             }
 
-            if (!$el.size() && this.$element) {
+            if (!$el.length && this.$element) {
                 $el = this.$element;
             }
             $el.popover({
@@ -547,13 +593,19 @@ Espo.define('views/fields/base', 'view', function (Dep) {
                 trigger: 'manual'
             }).popover('show');
 
+            var isDestroyed = false;
+
             $el.closest('.field').one('mousedown click', function () {
+                if (isDestroyed) return;
                 $el.popover('destroy');
+                isDestroyed = true;
             });
 
             this.once('render remove', function () {
+                if (isDestroyed) return;
                 if ($el) {
                     $el.popover('destroy');
+                    isDestroyed = true;
                 }
             });
 
@@ -562,8 +614,10 @@ Espo.define('views/fields/base', 'view', function (Dep) {
             }
 
             this._timeout = setTimeout(function () {
+                if (isDestroyed) return;
                 $el.popover('destroy');
-            }, 3000);
+                isDestroyed = true;
+            }, this.VALIDATION_POPOVER_TIMEOUT);
         },
 
         validate: function () {
@@ -583,7 +637,7 @@ Espo.define('views/fields/base', 'view', function (Dep) {
 
         validateRequired: function () {
             if (this.isRequired()) {
-                if (this.model.get(this.name) === '') {
+                if (this.model.get(this.name) === '' || this.model.get(this.name) === null) {
                     var msg = this.translate('fieldIsRequired', 'messages').replace('{field}', this.getLabelText());
                     this.showValidationMessage(msg);
                     return true;
@@ -616,6 +670,10 @@ Espo.define('views/fields/base', 'view', function (Dep) {
             }
             return false;
         },
+
+        fetchSearchType: function () {
+            return this.$el.find('select.search-type').val();
+        },
+
     });
 });
-

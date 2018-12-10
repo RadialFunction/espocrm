@@ -67,6 +67,9 @@ class Utils
         'userTeamsIds' => 'ldapUserTeamsIds',
         'userDefaultTeamId' => 'ldapUserDefaultTeamId',
         'userObjectClass' => 'ldapUserObjectClass',
+        'portalUserLdapAuth' => 'ldapPortalUserLdapAuth',
+        'portalUserPortalsIds' => 'ldapPortalUserPortalsIds',
+        'portalUserRolesIds' => 'ldapPortalUserRolesIds',
     );
 
     /**
@@ -86,6 +89,9 @@ class Utils
         'userLoginFilter',
         'userTeamsIds',
         'userDefaultTeamId',
+        'portalUserLdapAuth',
+        'portalUserPortalsIds',
+        'portalUserRolesIds',
     );
 
     /**
@@ -163,7 +169,7 @@ class Utils
      */
     public function getOption($name, $returns = null)
     {
-        if (isset($this->options)) {
+        if (!isset($this->options)) {
             $this->getOptions();
         }
 
