@@ -89,6 +89,9 @@ Espo.define('views/modals/edit', 'views/modal', function (Dep) {
             });
 
             this.scope = this.scope || this.options.scope;
+
+            this.entityType = this.options.entityType || this.scope;
+
             this.id = this.options.id;
 
             if (!this.id) {
@@ -106,11 +109,14 @@ Espo.define('views/modals/edit', 'views/modal', function (Dep) {
                 }
             }
 
+            var iconHtml = this.getHelper().getScopeColorIconHtml(this.scope);
+            this.header = iconHtml + this.header;
+
             this.sourceModel = this.model;
 
             this.waitForView('edit');
 
-            this.getModelFactory().create(this.scope, function (model) {
+            this.getModelFactory().create(this.entityType, function (model) {
                 if (this.id) {
                     if (this.sourceModel) {
                         model = this.model = this.sourceModel.clone();
@@ -123,6 +129,7 @@ Espo.define('views/modals/edit', 'views/modal', function (Dep) {
                     }, this);
                     model.fetch();
                 } else {
+                    this.model = model;
                     if (this.options.relate) {
                         model.setRelate(this.options.relate);
                     }
@@ -147,13 +154,16 @@ Espo.define('views/modals/edit', 'views/modal', function (Dep) {
                 type: 'editSmall',
                 layoutName: this.layoutName || 'detailSmall',
                 columnCount: this.columnCount,
-                buttonsPosition: false,
+                buttonsDisabled: true,
                 sideDisabled: this.sideDisabled,
                 bottomDisabled: this.bottomDisabled,
                 exit: function () {}
             };
+            this.handleRecordViewOptions(options);
             this.createView('edit', viewName, options, callback);
         },
+
+        handleRecordViewOptions: function (options) {},
 
         actionSave: function () {
             var editView = this.getView('edit');

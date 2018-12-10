@@ -28,20 +28,28 @@
  ************************************************************************/
 
 namespace Espo\Core\Utils\Database\Orm;
-use Espo\Core\Utils\Util,
-    Espo\ORM\Entity;
+
+use Espo\Core\Utils\Util;
+use Espo\ORM\Entity;
 
 class Converter
 {
     private $metadata;
+
     private $fileManager;
+
+    private $config;
+
     private $metadataHelper;
+
+    private $databaseHelper;
 
     private $relationManager;
 
     private $entityDefs;
 
     protected $defaultFieldType = 'varchar';
+
     protected $defaultNaming = 'postfix';
 
     protected $defaultLength = array(
@@ -62,6 +70,7 @@ class Converter
         'maxLength' => 'len',
         'len' => 'len',
         'notNull' => 'notNull',
+        'exportDisabled' => 'notExportable',
         'autoincrement' => 'autoincrement',
         'entity' => 'entity',
         'notStorable' => 'notStorable',
@@ -81,6 +90,7 @@ class Converter
         'select' => 'select',
         'orderBy' => 'orderBy',
         'where' => 'where',
+        'storeArrayValues' => 'storeArrayValues'
     );
 
     protected $idParams = array(
@@ -98,19 +108,26 @@ class Converter
         'additionalTables',
     );
 
-    public function __construct(\Espo\Core\Utils\Metadata $metadata, \Espo\Core\Utils\File\Manager $fileManager)
+    public function __construct(\Espo\Core\Utils\Metadata $metadata, \Espo\Core\Utils\File\Manager $fileManager, \Espo\Core\Utils\Config $config = null)
     {
         $this->metadata = $metadata;
         $this->fileManager = $fileManager; //need to featue with ormHooks. Ex. isFollowed field
+        $this->config = $config;
 
         $this->relationManager = new RelationManager($this->metadata);
 
         $this->metadataHelper = new \Espo\Core\Utils\Metadata\Helper($this->metadata);
+        $this->databaseHelper = new \Espo\Core\Utils\Database\Helper($this->config);
     }
 
     protected function getMetadata()
     {
         return $this->metadata;
+    }
+
+    protected function getConfig()
+    {
+        return $this->config;
     }
 
     protected function getEntityDefs($reload = false)
@@ -135,6 +152,11 @@ class Converter
     protected function getMetadataHelper()
     {
         return $this->metadataHelper;
+    }
+
+    protected function getDatabaseHelper()
+    {
+        return $this->databaseHelper;
     }
 
     /**
@@ -185,20 +207,22 @@ class Converter
 
         $ormMetadata = Util::merge($ormMetadata, $convertedLinks);
 
+        $this->applyFullTextSearch($ormMetadata, $entityName);
+
         if (!empty($entityMetadata['collection']) && is_array($entityMetadata['collection'])) {
             $collectionDefs = $entityMetadata['collection'];
             $ormMetadata[$entityName]['collection'] = array();
 
-            if (array_key_exists('sortByByColumn', $collectionDefs)) {
-                $ormMetadata[$entityName]['collection']['orderBy'] = $collectionDefs['sortByByColumn'];
-            } else if (array_key_exists('sortBy', $collectionDefs)) {
-                if (array_key_exists($collectionDefs['sortBy'], $ormMetadata[$entityName]['fields'])) {
-                    $ormMetadata[$entityName]['collection']['orderBy'] = $collectionDefs['sortBy'];
+            if (array_key_exists('orderByColumn', $collectionDefs)) {
+                $ormMetadata[$entityName]['collection']['orderBy'] = $collectionDefs['orderByColumn'];
+            } else if (array_key_exists('orderBy', $collectionDefs)) {
+                if (array_key_exists($collectionDefs['orderBy'], $ormMetadata[$entityName]['fields'])) {
+                    $ormMetadata[$entityName]['collection']['orderBy'] = $collectionDefs['orderBy'];
                 }
             }
             $ormMetadata[$entityName]['collection']['order'] = 'ASC';
-            if (array_key_exists('asc', $collectionDefs)) {
-                $ormMetadata[$entityName]['collection']['order'] = $collectionDefs['asc'] ? 'ASC' : 'DESC';
+            if (array_key_exists('order', $collectionDefs)) {
+                $ormMetadata[$entityName]['collection']['order'] = strtoupper($collectionDefs['order']);
             }
         }
 
@@ -238,6 +262,18 @@ class Converter
                     case 'bool':
                         $fieldParams['default'] = isset($fieldParams['default']) ? (bool) $fieldParams['default'] : $this->defaultValue['bool'];
                         break;
+
+                    //todo: remove the types from ORM Metadata. Types are deprecated.
+                    case 'email':
+                    case 'phone':
+                        break;
+
+                    default:
+                        $constName = strtoupper(Util::toUnderScore($fieldParams['type']));
+                        if (!defined('\\Espo\\ORM\\Entity::' . $constName)) {
+                            $fieldParams['type'] = $this->defaultFieldType;
+                        }
+                        break;
                 }
             }
         }
@@ -275,7 +311,8 @@ class Converter
             )
         );
 
-        foreach($entityMetadata['fields'] as $fieldName => $fieldParams) {
+        foreach ($entityMetadata['fields'] as $fieldName => $fieldParams) {
+            if (empty($fieldParams['type'])) continue;
 
             /** check if "fields" option exists in $fieldMeta */
             $fieldTypeMetadata = $this->getMetadataHelper()->getFieldDefsByType($fieldParams);
@@ -389,6 +426,10 @@ class Converter
             $fieldParams = Util::merge($fieldParams, $fieldTypeMetadata['fieldDefs']);
         }
 
+        if ($fieldParams['type'] == 'base' && isset($fieldParams['dbType'])) {
+            $fieldParams['notStorable'] = false;
+        }
+
         /** check if need to skipOrmDefs this field in ORM metadata */
         if (!empty($fieldTypeMetadata['skipOrmDefs']) || !empty($fieldParams['skipOrmDefs'])) {
             return false;
@@ -465,4 +506,47 @@ class Converter
         return $values;
     }
 
+    protected function applyFullTextSearch(&$ormMetadata, $entityType)
+    {
+        if (!$this->getDatabaseHelper()->isTableSupportsFulltext(Util::toUnderScore($entityType))) return;
+        if (!$this->getMetadata()->get(['entityDefs', $entityType, 'collection', 'fullTextSearch'])) return;
+
+        $fieldList = $this->getMetadata()->get(['entityDefs', $entityType, 'collection', 'textFilterFields'], ['name']);
+
+        $fullTextSearchColumnList = [];
+
+        foreach ($fieldList as $field) {
+            $defs = $this->getMetadata()->get(['entityDefs', $entityType, 'fields', $field], []);
+            if (empty($defs['type'])) continue;
+            $fieldType = $defs['type'];
+            if (!empty($defs['notStorable'])) continue;
+            if (!$this->getMetadata()->get(['fields', $fieldType, 'fullTextSearch'])) continue;
+
+            $partList = $this->getMetadata()->get(['fields', $fieldType, 'fullTextSearchColumnList']);
+            if ($partList) {
+                if ($this->getMetadata()->get(['fields', $fieldType, 'naming']) === 'prefix') {
+                    foreach ($partList as $part) {
+                        $fullTextSearchColumnList[] = $part . ucfirst($field);
+                    }
+                } else {
+                    foreach ($partList as $part) {
+                        $fullTextSearchColumnList[] = $field . ucfirst($part);
+                    }
+                }
+            } else {
+                $fullTextSearchColumnList[] = $field;
+            }
+        }
+
+        if (!empty($fullTextSearchColumnList)) {
+            $ormMetadata[$entityType]['fullTextSearchColumnList'] = $fullTextSearchColumnList;
+            if (!array_key_exists('indexes', $ormMetadata[$entityType])) {
+                $ormMetadata[$entityType]['indexes'] = [];
+            }
+            $ormMetadata[$entityType]['indexes']['system_fullTextSearch'] = [
+                'columns' => $fullTextSearchColumnList,
+                'flags' => ['fulltext']
+            ];
+        }
+    }
 }

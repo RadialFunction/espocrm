@@ -14,7 +14,8 @@
         "language": {
             "type": "enum",
             "view": "crm:views/knowledge-base-article/fields/language",
-            "default": ""
+            "default": "",
+            "customizationOptionsDisabled": true
         },
         "type": {
             "type": "enum",
@@ -33,7 +34,8 @@
         },
         "order": {
             "type": "int",
-            "disableFormatting": true
+            "disableFormatting": true,
+            "textFilterDisabled": true
         },
         "description": {
             "type": "text"
@@ -109,7 +111,7 @@
         }
     },
     "collection": {
-        "sortBy": "order",
-        "asc": true
+        "orderBy": "order",
+        "order": "asc"
     }
 }

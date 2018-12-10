@@ -6,7 +6,9 @@
     "align": "Alinear",
     "panelName": "Nombre del Panel",
     "style": "Estilo",
-    "sticked": "Pegado"
+    "sticked": "Pegado",
+    "isLarge": "Tamaño de fuente grande",
+    "dynamicLogicVisible": "Condiciones que hacen visible el panel"
   },
   "options": {
     "align": {
@@ -14,12 +16,14 @@
       "right": "Derecha"
     },
     "style": {
-      "default": "Por Omisión",
       "success": "Correcto",
       "danger": "Peligro",
-      "info": "Info",
       "warning": "Precaución",
       "primary": "Primario"
     }
+  },
+  "labels": {
+    "New panel": "Nuevo panel",
+    "Layout": "Formato"
   }
 }

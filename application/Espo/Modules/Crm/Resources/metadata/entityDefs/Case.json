@@ -13,7 +13,6 @@
             "type": "enum",
             "options": ["New", "Assigned", "Pending", "Closed", "Rejected", "Duplicate"],
             "default": "New",
-            "view": "views/fields/enum-styled",
             "style": {
                 "Closed": "success",
                 "Duplicate": "danger",
@@ -48,7 +47,8 @@
         },
         "contacts": {
             "type": "linkMultiple",
-            "view": "crm:views/case/fields/contacts"
+            "view": "crm:views/case/fields/contacts",
+            "orderBy": "name"
         },
         "inboundEmail": {
             "type": "link",
@@ -81,8 +81,7 @@
             "view": "views/fields/teams"
         },
         "attachments": {
-            "type": "attachmentMultiple",
-            "layoutListDisabled": true
+            "type": "attachmentMultiple"
         }
     },
     "links": {
@@ -164,8 +163,9 @@
         }
     },
     "collection": {
-        "sortBy": "number",
-        "asc": false
+        "orderBy": "number",
+        "order": "desc",
+        "textFilterFields": ["name", "number"]
     },
     "indexes": {
         "status": {

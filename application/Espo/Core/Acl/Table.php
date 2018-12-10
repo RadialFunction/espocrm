@@ -169,7 +169,7 @@ class Table
         if (isset($this->data->$permission)) {
             return $this->data->$permission;
         }
-        return null;
+        return 'no';
     }
 
     public function getLevel($scope, $action)
@@ -180,6 +180,15 @@ class Table
             }
         }
         return 'no';
+    }
+
+    public function getHighestLevel($action)
+    {
+        if (in_array($action, $this->booleanActionList)) {
+            return 'yes';
+        } else {
+            return 'all';
+        }
     }
 
     private function load()
@@ -210,6 +219,7 @@ class Table
             $this->applyDisabled($aclTable, $fieldTable);
             $this->applyMandatory($aclTable, $fieldTable);
             $this->applyAdditional($aclTable, $fieldTable, $valuePermissionLists);
+            $this->applyReadOnlyFields($fieldTable);
         } else {
             $aclTable = (object) [];
             foreach ($this->getScopeList() as $scope) {
@@ -553,7 +563,7 @@ class Table
 
     protected function applyAdditional(&$table, &$fieldTable, &$valuePermissionLists)
     {
-        if ($this->getUser()->get('isPortalUser')) {
+        if ($this->getUser()->isPortal()) {
             foreach ($this->getScopeList() as $scope) {
                 $table->$scope = false;
                 unset($fieldTable->$scope);
@@ -713,5 +723,29 @@ class Table
     private function buildCache()
     {
         $this->fileManager->putPhpContents($this->cacheFilePath, $this->data, true);
+    }
+
+    protected function applyReadOnlyFields(&$fieldTable)
+    {
+        // TODO Enable in 5.4.0
+        return;
+        $scopeList = $this->getScopeWithAclList();
+        foreach ($scopeList as $scope) {
+            if (!property_exists($fieldTable, $scope)) continue;
+            $fieldList = array_keys($this->getMetadata()->get(['entityDefs', $scope, 'fields'], []));
+            foreach ($fieldList as $field) {
+                if ($this->getMetadata()->get(['entityDefs', $scope, 'fields', $field, 'readOnly'])) {
+                    if (property_exists($fieldTable->$scope, $field)) {
+                        $fieldTable->$scope->$field->edit = 'no';
+                    } else {
+                        $fieldTable->$scope->$field = (object) [];
+                        foreach ($this->fieldActionList as $action) {
+                            $fieldTable->$scope->$field->$action = 'yes';
+                        }
+                        $fieldTable->$scope->$field->edit = 'no';
+                    }
+                }
+            }
+        }
     }
 }

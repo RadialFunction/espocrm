@@ -309,6 +309,24 @@ class Metadata
         $fieldDefinitionList = Util::objectToArray($data->fields);
 
         foreach (get_object_vars($data->entityDefs) as $entityType => $entityDefsItem) {
+
+            if (isset($data->entityDefs->$entityType->collection)) {
+
+                $collectionItem = $data->entityDefs->$entityType->collection;
+
+                if (isset($collectionItem->orderBy)) {
+                    $collectionItem->sortBy = $collectionItem->orderBy;
+                } else if (isset($collectionItem->sortBy)) {
+                    $collectionItem->orderBy = $collectionItem->sortBy;
+                }
+
+                if (isset($collectionItem->order)) {
+                     $collectionItem->asc = $collectionItem->order === 'asc' ? true : false;
+                } else if (isset($collectionItem->asc)) {
+                    $collectionItem->order = $collectionItem->asc === true ? 'asc' : 'desc';
+                }
+            }
+
             if (!isset($entityDefsItem->fields)) continue;
             foreach (get_object_vars($entityDefsItem->fields) as $field => $fieldDefsItem) {
                 $additionalFields = $this->getMetadataHelper()->getAdditionalFieldList($field, Util::objectToArray($fieldDefsItem), $fieldDefinitionList);
@@ -358,6 +376,14 @@ class Metadata
      */
     public function saveCustom($key1, $key2, $data)
     {
+        if (is_object($data)) {
+            foreach ($data as $key => $item) {
+                if ($item == new \stdClass()) {
+                    unset($data->$key);
+                }
+            }
+        }
+
         $filePath = array($this->paths['customPath'], $key1, $key2.'.json');
         $changedData = Json::encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
@@ -380,6 +406,14 @@ class Metadata
     */
     public function set($key1, $key2, $data)
     {
+        if (is_array($data)) {
+            foreach ($data as $key => $item) {
+                if (is_array($item) && empty($item)) {
+                    unset($data[$key]);
+                }
+            }
+        }
+
         $newData = array(
             $key1 => array(
                 $key2 => $data,

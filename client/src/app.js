@@ -220,8 +220,7 @@ Espo.define(
                 this.viewHelper.layoutManager.userId = this.user.id;
 
                 if (this.themeManager.isUserTheme()) {
-                    var stylesheetPath = this.basePath + this.themeManager.getStylesheet();
-                    $('#main-stylesheet').attr('href', stylesheetPath);
+                    this.loadStylesheet();
                 }
 
                 var promiseList = [];
@@ -264,7 +263,8 @@ Espo.define(
         },
 
         initRouter: function () {
-            this.router = new Router();
+            var routes = this.metadata.get(['app', 'clientRoutes']) || {};
+            this.router = new Router({routes: routes});
             this.viewHelper.router = this.router;
             this.baseController.setRouter(this.router);
             this.router.confirmLeaveOutMessage = this.language.translate('confirmLeaveOutMessage', 'messages');
@@ -286,12 +286,14 @@ Espo.define(
 
         doAction: function (params) {
             this.trigger('action', params);
+            this.baseController.trigger('action');
 
             this.getController(params.controller, function (controller) {
                 try {
                     controller.doAction(params.action, params.options);
                     this.trigger('action:done');
                 } catch (e) {
+                    console.log(e);
                     switch (e.name) {
                         case 'AccessDenied':
                             this.baseController.error403();
@@ -341,7 +343,9 @@ Espo.define(
                         className = Espo.Utils.composeClassName(module, name, 'controllers');
                     }
                     Espo.require(className, function (controllerClass) {
-                        this.controllers[name] = new controllerClass(this.baseController.params, this.getControllerInjection());
+                        var injections = this.getControllerInjection();
+                        injections.baseController = this.baseController;
+                        this.controllers[name] = new controllerClass(this.baseController.params, injections);
                         this.controllers[name].name = name;
                         this.controllers[name].masterView = this.masterView;
                         callback(this.controllers[name]);
@@ -375,6 +379,7 @@ Espo.define(
 
             helper.layoutManager = new LayoutManager({cache: this.cache, applicationId: this.id});
             helper.settings = this.settings;
+            helper.config = this.settings;
             helper.user = this.user;
             helper.preferences = this.preferences;
             helper.acl = this.acl;
@@ -402,6 +407,9 @@ Espo.define(
                 var path = null;
                 switch (type) {
                     case 'template':
+                        if (~name.indexOf('.')) {
+                            console.warn(name + ': template name should use slashes for a directory separator.');
+                        }
                         path = 'res/templates/' + name.split('.').join('/') + '.tpl';
                         break;
                     case 'layoutTemplate':
@@ -499,6 +507,16 @@ Espo.define(
             xhr.setRequestHeader('Authorization', 'Basic ' + Base64.encode('**logout:logout'));
             xhr.send('');
             xhr.abort();
+
+
+            this.loadStylesheet();
+        },
+
+        loadStylesheet: function () {
+            if (!this.metadata.get(['themes'])) return;
+
+            var stylesheetPath = this.basePath + this.themeManager.getStylesheet();
+            $('#main-stylesheet').attr('href', stylesheetPath);
         },
 
         setCookieAuth: function (username, token) {
@@ -599,6 +617,7 @@ Espo.define(
                     if (self.auth !== null) {
                         xhr.setRequestHeader('Authorization', 'Basic ' + self.auth);
                         xhr.setRequestHeader('Espo-Authorization', self.auth);
+                        xhr.setRequestHeader('Espo-Authorization-By-Token', true);
                     }
                 },
                 dataType: 'json',

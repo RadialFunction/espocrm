@@ -28,6 +28,7 @@
  ************************************************************************/
 
 namespace Espo\Core\Utils\Api;
+
 class Output
 {
     private $slim;
@@ -41,6 +42,9 @@ class Output
         500 => 'Internal Server Error',
     );
 
+    protected $ignorePrintXStatusReasonExceptionClassNameList = [
+        'PDOException'
+    ];
 
     public function __construct(\Espo\Core\Utils\Api\Slim $slim)
     {
@@ -68,7 +72,7 @@ class Output
         echo $data;
     }
 
-    public function processError($message = 'Error', $code = 500, $isPrint = false)
+    public function processError($message = 'Error', $code = 500, $isPrint = false, $exception = null)
     {
         $currentRoute = $this->getSlim()->router()->getCurrentRoute();
 
@@ -78,7 +82,7 @@ class Output
             $GLOBALS['log']->error('API ['.$this->getSlim()->request()->getMethod().']:'.$currentRoute->getPattern().', Params:'.print_r($currentRoute->getParams(), true).', InputData: '.$inputData.' - '.$message);
         }
 
-        $this->displayError($message, $code, $isPrint);
+        $this->displayError($message, $code, $isPrint, $exception);
     }
 
     /**
@@ -89,15 +93,21 @@ class Output
     *
     * @return void
     */
-    public function displayError($text, $statusCode = 500, $isPrint = false)
+    public function displayError($text, $statusCode = 500, $isPrint = false, $exception = null)
     {
         $GLOBALS['log']->error('Display Error: '.$text.', Code: '.$statusCode.' URL: '.$_SERVER['REQUEST_URI']);
 
         ob_clean();
 
         if (!empty( $this->slim)) {
-            $this->getSlim()->response()->status($statusCode);
-            $this->getSlim()->response()->header('X-Status-Reason', $text);
+            $toPrintXStatusReason = true;
+            if ($exception && in_array(get_class($exception), $this->ignorePrintXStatusReasonExceptionClassNameList)) {
+                $toPrintXStatusReason = false;
+            }
+            $this->getSlim()->response()->setStatus($statusCode);
+            if ($toPrintXStatusReason) {
+                $this->getSlim()->response()->headers->set('X-Status-Reason', $text);
+            }
 
             if ($isPrint) {
                 $status = $this->getCodeDesc($statusCode);
@@ -139,4 +149,3 @@ class Output
         return preg_replace('/"(.*?password.*?)":".*?"/i', '"$1":"*****"', $inputData);
     }
 }
-

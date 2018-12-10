@@ -8,7 +8,7 @@
       {
          "name":"options",
          "type":"array",
-         "view": "views/admin/field-manager/fields/options"
+         "view": "views/admin/field-manager/fields/options-with-style"
       },
       {
          "name":"default",
@@ -25,6 +25,11 @@
          "hidden": true
       },
       {
+         "name":"style",
+         "type":"jsonObject",
+         "hidden": true
+      },
+      {
          "name":"audited",
          "type":"bool"
       },
@@ -37,5 +42,6 @@
    "fieldDefs":{
       "type":"varchar"
    },
-   "translatedOptions": true
+   "translatedOptions": true,
+   "personalData": true
 }

@@ -56,8 +56,30 @@ class Email extends Record
 
     protected $getEntityBeforeUpdate = true;
 
+    protected $skipSelectTextAttributes = true;
+
     protected $allowedForUpdateAttributeList = [
         'parentType', 'parentId', 'parentName', 'teamsIds', 'teamsNames', 'assignedUserId', 'assignedUserName'
+    ];
+
+    protected $mandatorySelectAttributeList = [
+        'name',
+        'createdById',
+        'dateSent',
+        'fromString',
+        'fromEmailAddressId',
+        'fromEmailAddressName',
+        'parentId',
+        'parentType',
+        'isHtml',
+        'isReplied',
+        'status',
+        'accountId',
+        'folderId',
+        'messageId',
+        'sentById',
+        'replyToString',
+        'hasAttachment'
     ];
 
     protected function getFileManager()
@@ -124,7 +146,7 @@ class Email extends Record
             $emailAccount = $emailAccountService->findAccountForUser($this->getUser(), $fromAddress);
 
             if (!$smtpParams) {
-                if ($emailAccount) {
+                if ($emailAccount && $emailAccount->get('useSmtp')) {
                     $smtpParams = $emailAccountService->getSmtpParamsFromAccount($emailAccount);
                     if ($smtpParams) {
                         $emailSender->useSmtp($smtpParams);
@@ -150,14 +172,26 @@ class Email extends Record
 
         if (!$smtpParams && $fromAddress === strtolower($this->getConfig()->get('outboundEmailFromAddress'))) {
             if (!$this->getConfig()->get('outboundEmailIsShared')) {
-                throw new Error('Can not use system smtp. System SMTP is not shared.');
+                throw new Error('Can not use system SMTP. System account is not shared.');
             }
-            $emailSender->setParams(array(
-                'fromName' => $this->getUser()->get('name')
-            ));
+            $emailSender->setParams([
+                'fromName' => $this->getConfig()->get('outboundEmailFromName')
+            ]);
         }
 
-        $params = array();
+        if (!$smtpParams && !$this->getConfig()->get('outboundEmailIsShared')) {
+            throw new Error('No SMTP params found for '.$fromAddress.'.');
+        }
+
+        if (!$smtpParams) {
+            if (in_array($fromAddress, $userAddressList)) {
+                $emailSender->setParams([
+                    'fromName' => $this->getUser()->get('name')
+                ]);
+            }
+        }
+
+        $params = [];
 
         $parent = null;
         if ($entity->get('parentType') && $entity->get('parentId')) {
@@ -276,6 +310,11 @@ class Email extends Record
         $this->getEntityManager()->getRepository('Email')->loadBccField($entity);
     }
 
+    public function loadReplyToField(Entity $entity)
+    {
+        $this->getEntityManager()->getRepository('Email')->loadReplyToField($entity);
+    }
+
     public function getEntity($id = null)
     {
         $entity = $this->getRepository()->get($id);
@@ -304,6 +343,7 @@ class Email extends Record
         $this->loadToField($entity);
         $this->loadCcField($entity);
         $this->loadBccField($entity);
+        $this->loadReplyToField($entity);
 
         $this->loadNameHash($entity);
 
@@ -409,18 +449,7 @@ class Email extends Record
         ";
         $pdo->query($sql);
 
-        $sql = "
-            UPDATE notification SET `read` = 1
-            WHERE
-                `deleted` = 0 AND
-                `type` = 'EmailReceived' AND
-                `related_type` = 'Email' AND
-                `related_id` = " . $pdo->quote($id) ." AND
-                `read` = 0 AND
-                `user_id` = " . $pdo->quote($userId) . "
-        ";
-
-        $pdo->query($sql);
+        $this->markNotificationAsRead($id, $userId);
 
         return true;
     }
@@ -490,7 +519,27 @@ class Email extends Record
                 email_id = " . $pdo->quote($id) . "
         ";
         $pdo->query($sql);
+
+        $this->markNotificationAsRead($id, $userId);
+
         return true;
+    }
+
+    public function markNotificationAsRead($id, $userId)
+    {
+        $pdo = $this->getEntityManager()->getPDO();
+
+        $sql = "
+            UPDATE notification SET `read` = 1
+            WHERE
+                `deleted` = 0 AND
+                `type` = 'EmailReceived' AND
+                `related_type` = 'Email' AND
+                `related_id` = " . $pdo->quote($id) ." AND
+                `read` = 0 AND
+                `user_id` = " . $pdo->quote($userId) . "
+        ";
+        $pdo->query($sql);
     }
 
     public function retrieveFromTrash($id, $userId = null)
@@ -541,6 +590,21 @@ class Email extends Record
         return $fromName;
     }
 
+    static public function parseFromAddress($string)
+    {
+        $fromAddress = '';
+        if ($string) {
+            if (stripos($string, '<') !== false) {
+                if (preg_match('/<(.*)>/', $string, $matches)) {
+                    $fromAddress = trim($matches[1]);
+                }
+            } else {
+                $fromAddress = $string;
+            }
+        }
+        return $fromAddress;
+    }
+
     public function loadAdditionalFieldsForList(Entity $entity)
     {
         parent::loadAdditionalFieldsForList($entity);
@@ -559,7 +623,7 @@ class Email extends Record
             if (!empty($idList)) {
                 $arr = [];
                 foreach ($idList as $emailAddressId) {
-                    $person = $this->getEntityManager()->getRepository('EmailAddress')->getEntityByAddressId($emailAddressId);
+                    $person = $this->getEntityManager()->getRepository('EmailAddress')->getEntityByAddressId($emailAddressId, null, true);
                     if ($person) {
                         $arr[] = $person->get('name');
                     } else {
@@ -571,11 +635,11 @@ class Email extends Record
         } else {
             $fromEmailAddressId = $entity->get('fromEmailAddressId');
             if (!empty($fromEmailAddressId)) {
-                $person = $this->getEntityManager()->getRepository('EmailAddress')->getEntityByAddressId($fromEmailAddressId);
+                $person = $this->getEntityManager()->getRepository('EmailAddress')->getEntityByAddressId($fromEmailAddressId, null, true);
                 if ($person) {
                     $entity->set('personStringData', $person->get('name'));
                 } else {
-                    $fromName = self::parseFromName($entity->get('fromString'));
+                    $fromName = $entity->get('fromName');
                     if (!empty($fromName)) {
                         $entity->set('personStringData', $fromName);
                     } else {
@@ -615,7 +679,7 @@ class Email extends Record
         }
     }
 
-    public function loadNameHash(Entity $entity, array $fieldList = ['from', 'to', 'cc', 'bcc'])
+    public function loadNameHash(Entity $entity, array $fieldList = ['from', 'to', 'cc', 'bcc', 'replyTo'])
     {
         $this->getEntityManager()->getRepository('Email')->loadNameHash($entity, $fieldList);
     }
@@ -727,6 +791,10 @@ class Email extends Record
 
         if ($entity->isManuallyArchived()) {
             $skipFilter = true;
+        } else {
+            if ($entity->isAttributeChanged('dateSent')) {
+                $entity->set('dateSent', $entity->getFetched('dateSent'));
+            }
         }
 
         if ($entity->get('status') === 'Draft') {
@@ -735,6 +803,10 @@ class Email extends Record
 
         if ($entity->get('status') === 'Sending' && $entity->getFetched('status') === 'Draft') {
             $skipFilter = true;
+        }
+
+        if ($entity->isAttributeChanged('status') && $entity->getFetched('status') === 'Archived') {
+            $entity->set('status', 'Archived');
         }
 
         if (!$skipFilter) {
@@ -781,5 +853,15 @@ class Email extends Record
         }
 
         return $data;
+    }
+
+    public function isPermittedAssignedUser(Entity $entity)
+    {
+        return true;
+    }
+
+    public function isPermittedAssignedUsers(Entity $entity)
+    {
+        return true;
     }
 }

@@ -73,7 +73,11 @@
             },
             "User": {
                 "password": false,
-                "passwordConfirm": false
+                "passwordConfirm": false,
+                "authMethod": false,
+                "apiKey": false,
+                "secretKey": false,
+                "token": false
             }
         }
     },
@@ -82,7 +86,8 @@
             "User": {
                 "read": "all",
                 "edit": "no"
-            }
+            },
+            "Import": false
         },
         "fieldLevel": {
         },
@@ -97,7 +102,8 @@
             "User": {
                 "read": "own",
                 "edit": "no"
-            }
+            },
+            "Import": false
         },
         "fieldLevel": {
         },
@@ -112,28 +118,36 @@
         "userPermission",
         "portalPermission",
         "groupEmailAccountPermission",
-        "exportPermission"
+        "exportPermission",
+        "massUpdatePermission",
+        "dataPrivacyPermission"
     ],
     "valuePermissionHighestLevels": {
         "assignmentPermission": "all",
         "userPermission": "all",
         "portalPermission": "yes",
         "groupEmailAccountPermission": "all",
-        "exportPermission": "yes"
+        "exportPermission": "yes",
+        "massUpdatePermission": "yes",
+        "dataPrivacyPermission": "yes"
     },
     "permissionsDefaults": {
         "assignmentPermission": "all",
         "userPermission": "all",
         "portalPermission": "no",
         "groupEmailAccountPermission": "no",
-        "exportPermission": "yes"
+        "exportPermission": "yes",
+        "massUpdatePermission": "yes",
+        "dataPrivacyPermission": "no"
     },
     "permissionsStrictDefaults": {
         "assignmentPermission": "no",
         "userPermission": "no",
         "portalPermission": "no",
         "groupEmailAccountPermission": "no",
-        "exportPermission": "no"
+        "exportPermission": "no",
+        "massUpdatePermission": "no",
+        "dataPrivacyPermission": "no"
     },
     "scopeLevelTypesDefaults": {
         "boolean": true,

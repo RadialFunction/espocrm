@@ -32,9 +32,9 @@ Espo.define('crm:views/record/panels/history', 'crm:views/record/panels/activiti
 
         name: 'history',
 
-        sortBy: 'dateStart',
+        orderBy: 'dateStart',
 
-        asc: false,
+        orderDirection: 'desc',
 
         rowActionsView: 'crm:views/record/row-actions/history',
 
@@ -52,7 +52,8 @@ Espo.define('crm:views/record/panels/history', 'crm:views/record/panels/activiti
                     ],
                     [
                         {name: 'status'},
-                        {name: 'dateSent'}
+                        {name: 'dateSent'},
+                        {name: 'hasAttachment', view: 'views/email/fields/has-attachment'}
                     ]
                 ]
             },
@@ -160,7 +161,7 @@ Espo.define('crm:views/record/panels/history', 'crm:views/record/panels/activiti
             }
 
             Espo.require('EmailHelper', function (EmailHelper) {
-                var emailHelper = new EmailHelper(this.getLanguage(), this.getUser(), this.getDateTime());
+                var emailHelper = new EmailHelper(this.getLanguage(), this.getUser(), this.getDateTime(), this.getAcl());
 
                 this.notify('Please wait...');
 
@@ -172,9 +173,7 @@ Espo.define('crm:views/record/panels/history', 'crm:views/record/panels/activiti
                         this.createView('quickCreate', viewName, {
                             attributes: attributes,
                         }, function (view) {
-                            view.render(function () {
-                                view.getView('edit').hideField('selectTemplate');
-                            });
+                            view.render();
 
                             this.listenToOnce(view, 'after:save', function () {
                                 this.collection.fetch();
@@ -190,4 +189,3 @@ Espo.define('crm:views/record/panels/history', 'crm:views/record/panels/activiti
         }
     });
 });
-

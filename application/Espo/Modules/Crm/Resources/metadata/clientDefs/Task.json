@@ -8,6 +8,9 @@
         "list": "crm:views/task/list",
         "detail": "crm:views/task/detail"
     },
+    "modalViews": {
+        "detail": "crm:views/task/modals/detail"
+    },
     "dynamicLogic": {
         "fields": {
             "dateCompleted": {
@@ -72,5 +75,6 @@
     "boolFilterList": [
         "onlyMy"
     ],
-    "iconClass": "glyphicon glyphicon-list-alt"
+    "iconClass": "fas fa-tasks",
+    "kanbanViewMode": true
 }

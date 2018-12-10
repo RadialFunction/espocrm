@@ -31,20 +31,29 @@ namespace Espo\Entities;
 
 class Note extends \Espo\Core\ORM\Entity
 {
+    private $aclIsProcessed = false;
+
+    public function setAclIsProcessed()
+    {
+        $this->aclIsProcessed = true;
+    }
+
+    public function isAclProcessed()
+    {
+        return $this->aclIsProcessed;
+    }
+
     public function loadAttachments()
     {
         $data = $this->get('data');
-        if (!empty($data) && !empty($data->attachmentsIds)) {
+        if (!empty($data) && !empty($data->attachmentsIds) && is_array($data->attachmentsIds)) {
             $attachmentsIds = $data->attachmentsIds;
-            $collection = array();
-            foreach ($attachmentsIds as $id) {
-                $attachment = $this->entityManager->getEntity('Attachment', $id);
-                if ($attachment) {
-                    $collection[] = $attachment;
-                }
-            }
+            $collection = $this->entityManager->getRepository('Attachment')->select(['id', 'name', 'type'])->order('createdAt')->where([
+                'id' => $attachmentsIds
+            ])->find();
         } else {
-            $collection = $this->get('attachments');
+            $this->loadLinkMultipleField('attachments');
+            return;
         }
 
         $ids = array();

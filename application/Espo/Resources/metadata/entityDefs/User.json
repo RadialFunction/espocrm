@@ -2,7 +2,8 @@
     "fields": {
         "isAdmin": {
             "type": "bool",
-            "tooltip": true
+            "tooltip": true,
+            "disabled": true
         },
         "userName": {
             "type": "varchar",
@@ -14,6 +15,14 @@
         "name": {
             "type": "personName",
             "view": "views/user/fields/name"
+        },
+        "type": {
+            "type": "enum",
+            "options": ["regular", "admin", "portal", "system", "super-admin", "api"],
+            "default": "regular",
+            "maxLength": 24,
+            "index": true,
+            "layoutMassUpdateDisabled": true
         },
         "password": {
             "type": "password",
@@ -27,6 +36,34 @@
             "internal": true,
             "disabled": true,
             "notStorable": true
+        },
+        "authMethod": {
+            "type": "enum",
+            "options": ["ApiKey", "Hmac"],
+            "maxLength": 24,
+            "layoutMassUpdateDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutFiltersDisabled": true,
+            "layoutListDisabled": true
+        },
+        "apiKey": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutFiltersDisabled": true,
+            "layoutListDisabled": true
+        },
+        "secretKey": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true,
+            "notStorable": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutFiltersDisabled": true,
+            "layoutListDisabled": true
         },
         "salutationName": {
             "type": "enum",
@@ -51,7 +88,8 @@
             "default": true
         },
         "isPortalUser": {
-            "type": "bool"
+            "type": "bool",
+            "disabled": true
         },
         "isSuperAdmin": {
             "type": "bool",
@@ -96,7 +134,8 @@
             },
             "trim": true,
             "layoutDetailDisabled": true,
-            "layoutListDisabled": true
+            "layoutListDisabled": true,
+            "textFilterDisabled": true
         },
         "emailAddress": {
             "type": "email",
@@ -113,6 +152,11 @@
             "disabled": true
         },
         "authTokenId": {
+            "type": "varchar",
+            "notStorable": true,
+            "disabled": true
+        },
+        "authLogRecordId": {
             "type": "varchar",
             "notStorable": true,
             "disabled": true
@@ -165,6 +209,7 @@
             "columns": {
                 "role": "userRole"
             },
+            "additionalAttributeList": ["columns"],
             "view": "views/user/fields/teams",
             "default": "javascript: return {teamsIds: []}"
         },
@@ -221,6 +266,16 @@
             "type": "link",
             "readOnly": true,
             "view": "views/fields/user"
+        },
+        "lastAccess": {
+            "type": "datetime",
+            "notStorable": true,
+            "readOnly": true,
+            "layoutListDisabled": true,
+            "layoutFiltersDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutDetailDisabled": true,
+            "directAccessDisabled": true
         }
     },
     "links": {
@@ -305,8 +360,8 @@
         }
     },
     "collection": {
-        "sortBy": "userName",
-        "asc": true,
+        "orderBy": "userName",
+        "order": "asc",
         "textFilterFields": ["name", "userName"]
     }
 }

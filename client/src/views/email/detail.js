@@ -55,27 +55,27 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
                     style: 'danger'
                 }, true);
 
+                this.addMenuItem('dropdown', false);
 
                 if (status == 'Archived' || status == 'Recieved') {
                     if (!this.model.get('parentId')) {
-                        this.menu.dropdown.push({
+                        this.addMenuItem('dropdown', {
                             label: 'Create Lead',
                             action: 'createLead',
                             acl: 'edit',
                             aclScope: 'Lead'
                         });
-                        if (this.getConfig().get('b2cMode')) {
-                            this.menu.dropdown.push({
-                                label: 'Create Contact',
-                                action: 'createContact',
-                                acl: 'edit',
-                                aclScope: 'Contact'
-                            });
-                        }
+
+                        this.addMenuItem('dropdown', {
+                            label: 'Create Contact',
+                            action: 'createContact',
+                            acl: 'edit',
+                            aclScope: 'Contact'
+                        });
                     }
                 }
 
-                this.menu.dropdown.push({
+                this.addMenuItem('dropdown', {
                     label: 'Create Task',
                     action: 'createTask',
                     acl: 'edit',
@@ -83,7 +83,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
                 });
 
                 if (this.model.get('parentType') !== 'Case' || !this.model.get('parentId')) {
-                    this.menu.dropdown.push({
+                    this.addMenuItem('dropdown', {
                         label: 'Create Case',
                         action: 'createCase',
                         acl: 'edit',
@@ -104,7 +104,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
         actionCreateLead: function () {
             var attributes = {};
 
-            var emailHelper = new EmailHelper(this.getLanguage(), this.getUser(), this.getDateTime());
+            var emailHelper = new EmailHelper(this.getLanguage(), this.getUser(), this.getDateTime(), this.getAcl());
 
             var fromString = this.model.get('fromString') || this.model.get('fromName');
             if (fromString) {
@@ -135,7 +135,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
             }
             attributes.emailId = this.model.id;
 
-            var viewName = this.getMetadata().get('clientDefs.Lead.modalViews.detail') || 'views/modals/edit';
+            var viewName = this.getMetadata().get('clientDefs.Lead.modalViews.edit') || 'views/modals/edit';
 
             this.notify('Loading...');
             this.createView('quickCreate', viewName, {
@@ -156,31 +156,56 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
         actionCreateCase: function () {
             var attributes = {};
 
-            if (this.model.get('parentType') == 'Account' && this.model.get('parentId')) {
-                attributes.accountId = this.model.get('parentId');
-                attributes.accountName = this.model.get('parentName');
+            var parentId = this.model.get('parentId');
+            var parentType = this.model.get('parentType');
+            var parentName = this.model.get('parentName');
+
+            if (parentId) {
+                if (parentType == 'Account') {
+                    attributes.accountId = parentId;
+                    attributes.accountName = parentName;
+                } else if (parentType == 'Contact') {
+                    attributes.contactId = parentId;
+                    attributes.contactName = parentName;
+                }
             }
+
             attributes.emailsIds = [this.model.id];
             attributes.emailId = this.model.id;
             attributes.name = this.model.get('name');
+            attributes.description = this.model.get('bodyPlain') || '';
 
-            var viewName = this.getMetadata().get('clientDefs.Case.modalViews.detail') || 'Modals.Edit';
+            var viewName = this.getMetadata().get('clientDefs.Case.modalViews.edit') || 'views/modals/edit';
 
-            this.notify('Loading...');
-            this.createView('quickCreate', viewName, {
-                scope: 'Case',
-                attributes: attributes,
-            }, function (view) {
-                view.render();
-                view.notify(false);
-                view.once('after:save', function () {
-                    this.model.fetch();
-                    this.removeMenuItem('createCase');
-                    view.close();
+            Espo.Ui.notify(this.translate('loading', 'messsages'));
+
+            (new Promise(function (resolve) {
+                if (!(this.model.get('attachmentsIds') || []).length) {
+                    resolve();
+                    return;
+                }
+                this.ajaxPostRequest('Email/action/getCopiedAttachments', {
+                    id: this.model.id
+                }).then(function (data) {
+                    attributes.attachmentsIds = data.ids;
+                    attributes.attachmentsNames = data.names;
+                    resolve();
                 }.bind(this));
+            }.bind(this))).then(function () {
+                this.createView('quickCreate', viewName, {
+                    scope: 'Case',
+                    attributes: attributes,
+                }, function (view) {
+                    view.render();
+                    Espo.Ui.notify(false);
+                    this.listenToOnce(view, 'after:save', function () {
+                        this.model.fetch();
+                        this.removeMenuItem('createCase');
+                        view.close();
+                    }, this);
+                });
             }.bind(this));
         },
-
 
         actionCreateTask: function () {
             var attributes = {};
@@ -193,7 +218,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
 
             attributes.name = this.translate('Email', 'scopeNames') + ': ' + this.model.get('name');
 
-            var viewName = this.getMetadata().get('clientDefs.Task.modalViews.detail') || 'Modals.Edit';
+            var viewName = this.getMetadata().get('clientDefs.Task.modalViews.edit') || 'views/modals/edit';
 
             this.notify('Loading...');
             this.createView('quickCreate', viewName, {
@@ -211,7 +236,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
         actionCreateContact: function () {
             var attributes = {};
 
-            var emailHelper = new EmailHelper(this.getLanguage(), this.getUser(), this.getDateTime());
+            var emailHelper = new EmailHelper(this.getLanguage(), this.getUser(), this.getDateTime(), this.getAcl());
 
             var fromString = this.model.get('fromString') || this.model.get('fromName');
             if (fromString) {
@@ -242,7 +267,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
             }
             attributes.emailId = this.model.id;
 
-            var viewName = this.getMetadata().get('clientDefs.Contact.modalViews.detail') || 'Modals.Edit';
+            var viewName = this.getMetadata().get('clientDefs.Contact.modalViews.edit') || 'views/modals/edit';
 
             this.notify('Loading...');
             this.createView('quickCreate', viewName, {
@@ -294,7 +319,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
         },
 
         actionReply: function (data, e, cc) {
-            var emailHelper = new EmailHelper(this.getLanguage(), this.getUser(), this.getDateTime());
+            var emailHelper = new EmailHelper(this.getLanguage(), this.getUser(), this.getDateTime(), this.getAcl());
 
             var attributes = emailHelper.getReplyAttributes(this.model, data, cc);
 
@@ -303,9 +328,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
             this.createView('quickCreate', viewName, {
                 attributes: attributes,
             }, function (view) {
-                view.render(function () {
-                    view.getView('edit').hideField('selectTemplate');
-                });
+                view.render();
 
                 view.notify(false);
 
@@ -320,7 +343,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
         },
 
         actionForward: function (data, cc) {
-            var emailHelper = new EmailHelper(this.getLanguage(), this.getUser(), this.getDateTime());
+            var emailHelper = new EmailHelper(this.getLanguage(), this.getUser(), this.getDateTime(), this.getAcl());
 
             var attributes = emailHelper.getForwardAttributes(this.model, data, cc);
 
@@ -340,9 +363,7 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
                 this.createView('quickCreate', viewName, {
                     attributes: attributes,
                 }, function (view) {
-                    view.render(function () {
-                        view.getView('edit').hideField('selectTemplate');
-                    });
+                    view.render();
 
                     view.notify(false);
                 });
@@ -360,8 +381,10 @@ Espo.define('views/email/detail', ['views/detail', 'email-helper'], function (De
 
             var rootUrl = this.options.rootUrl || this.options.params.rootUrl || '#' + this.scope;
 
+            var headerIconHtml = this.getHeaderIconHtml();
+
             return this.buildHeaderHtml([
-                '<a href="#' + rootUrl + '" class="action" data-action="navigateToRoot">' + this.getLanguage().translate(this.model.name, 'scopeNamesPlural') + '</a>',
+                headerIconHtml+ '<a href="#' + rootUrl + '" class="action" data-action="navigateToRoot">' + this.getLanguage().translate(this.model.name, 'scopeNamesPlural') + '</a>',
                 nameHtml
             ]);
         },

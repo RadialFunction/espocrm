@@ -36,28 +36,12 @@ Espo.define('views/import/list', 'views/list', function (Dep) {
             Dep.prototype.setup.call(this);
 
             this.menu.buttons.unshift({
-                label: this.translate('Import', 'scopeNames'),
+                html: 'New Import',
                 link: '#Import',
-                style: 'danger',
+                style: 'primary',
                 acl: 'edit'
             });
-        },
-
-        actionCreateEmailAccount: function () {
-            if (this.options.userId) {
-                this.getRouter().dispatch('EmailAccount', 'create', {
-                    attributes: {
-                        assignedUserId: this.options.userId,
-                        assignedUserName: this.options.userId
-                    }
-                });
-                this.getRouter().navigate('#EmailAccount/create', {trigger: false});
-            } else {
-                this.getRouter().navigate('#EmailAccount/create', {trigger: true});
-            }
-        },
-
+        }
 
     });
 });
-

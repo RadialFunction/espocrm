@@ -3,16 +3,22 @@
         "label":"",
         "rows":[
             [{"name":"name"}, {"name": "status"}],
-            [{"name":"executeTime"}, {"name": "attempts"}],
-            [{"name":"createdAt"}, {"name": "failedAttempts"}],
-            [{"name":"modifiedAt"}, false]
+            [{"name":"queue"}, {"name":"number"}]
         ]
     },
     {
         "label":"",
         "rows":[
-            [{"name":"scheduledJob"}, false],
-            [{"name":"serviceName"}, false],
+            [{"name":"executeTime"}, {"name": "createdAt"}],
+            [{"name":"executedAt"}, {"name": "modifiedAt"}],
+            [{"name":"attempts"}, {"name": "failedAttempts"}]
+        ]
+    },
+    {
+        "label":"",
+        "rows":[
+            [{"name":"scheduledJob"}, {"name":"targetType"}],
+            [{"name":"serviceName"}, {"name":"targetId"}],
             [{"name":"methodName"}, false],
             [{"name": "data", "fullWidth": true}]
         ]

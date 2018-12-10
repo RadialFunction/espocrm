@@ -33,12 +33,22 @@ class Entity extends \Espo\ORM\Entity
 {
     public function hasLinkMultipleField($field)
     {
-        return $this->hasAttribute($field . 'Ids');
+        return
+            $this->hasRelation($field) &&
+            $this->getAttributeParam($field . 'Ids', 'isLinkMultipleIdList');
     }
 
     public function hasLinkField($field)
     {
-        return $this->hasAttribute($field . 'Id');
+        return $this->hasAttribute($field . 'Id') && $this->hasRelation($field);
+    }
+
+    public function hasLinkParentField($field)
+    {
+        return
+            $this->hasAttributeType($field . 'Type') == 'foreignType' &&
+            $this->hasAttribute($field . 'Id') &&
+            $this->hasRelation($field);
     }
 
     public function loadParentNameField($field)
@@ -53,52 +63,83 @@ class Entity extends \Espo\ORM\Entity
             $repository = $this->entityManager->getRepository($parentType);
 
             $select = ['id', 'name'];
-            if ($parentType === 'Lead') {
-                $select[] = 'accountName';
-                $select[] = 'emailAddress';
-                $select[] = 'phoneNumber';
-            }
             $foreignEntity = $repository->select($select)->where(['id' => $parentId])->findOne();
             if ($foreignEntity) {
                 $this->set($field . 'Name', $foreignEntity->get('name'));
+            } else {
+                $this->set($field . 'Name', null);
+            }
+        } else {
+            $this->set($field . 'Name', null);
+        }
+    }
+
+    public function getLinkMultipleCollection($field)
+    {
+        if (!$this->hasLinkMultipleField($field)) return;
+
+        $defs = $this->getRelationSelectParams($field);
+
+        $columnAttribute = $field . 'Columns';
+        if ($this->hasAttribute($columnAttribute) && $this->getAttributeParam($columnAttribute, 'columns')) {
+            $defs['additionalColumns'] = $this->getAttributeParam($columnAttribute, 'columns');
+        }
+
+        $collection = $this->get($field, $defs);
+
+        return $collection;
+    }
+
+    protected function getRelationSelectParams($link)
+    {
+        $field = $link;
+
+        $defs = [];
+
+        $idsAttribute = $field . 'Ids';
+
+        $foreignEntityType = $this->getRelationParam($field, 'entity');
+
+        if ($this->getAttributeParam($idsAttribute, 'orderBy')) {
+            $defs['orderBy'] = $this->getAttributeParam($idsAttribute, 'orderBy');
+            $defs['order'] = 'ASC';
+            if ($this->getAttributeParam($idsAttribute, 'orderDirection')) {
+                $defs['order'] = $this->getAttributeParam($idsAttribute, 'orderDirection');
+            }
+        } else {
+            if ($foreignEntityType && $this->entityManager) {
+                $foreignEntityDefs = $this->entityManager->getMetadata()->get($foreignEntityType);
+                if ($foreignEntityDefs && !empty($foreignEntityDefs['collection'])) {
+                    $collectionDefs = $foreignEntityDefs['collection'];
+                    if (!empty($foreignEntityDefs['collection']['orderBy'])) {
+                        $orderBy = $foreignEntityDefs['collection']['orderBy'];
+                        $order = 'ASC';
+                        if (array_key_exists('order', $foreignEntityDefs['collection'])) {
+                            $order = $foreignEntityDefs['collection']['order'];
+                        }
+                        if (array_key_exists($orderBy, $foreignEntityDefs['fields'])) {
+                            $defs['orderBy'] = $orderBy;
+                            $defs['order'] = $order;
+                        }
+                    }
+                }
             }
         }
+
+        return $defs;
     }
 
     public function loadLinkMultipleField($field, $columns = null)
     {
         if (!$this->hasRelation($field) || !$this->hasAttribute($field . 'Ids')) return;
 
-        $defs = array();
+        $defs = $this->getRelationSelectParams($field);
+
         if (!empty($columns)) {
             $defs['additionalColumns'] = $columns;
         }
 
-        $foreignEntityType = $this->getRelationParam($field, 'entity');
-        if ($foreignEntityType && $this->entityManager) {
-            $foreignEntityDefs = $this->entityManager->getMetadata()->get($foreignEntityType);
-            if ($foreignEntityDefs && !empty($foreignEntityDefs['collection'])) {
-                $collectionDefs = $foreignEntityDefs['collection'];
-                if (!empty($foreignEntityDefs['collection']['orderBy'])) {
-                    $orderBy = $foreignEntityDefs['collection']['orderBy'];
-                    $order = 'ASC';
-                    if (array_key_exists('order', $foreignEntityDefs['collection'])) {
-                        $order = $foreignEntityDefs['collection']['order'];
-                    }
-                    if (array_key_exists($orderBy, $foreignEntityDefs['fields'])) {
-                        $defs['orderBy'] = $orderBy;
-                        $defs['order'] = $order;
-                    }
-                }
-            }
-        }
-
         $defs['select'] = ['id', 'name'];
-        if ($foreignEntityType === 'Lead') {
-            $defs['select'][] = 'accountName';
-            $defs['select'][] = 'emailAddress';
-            $defs['select'][] = 'phoneNumber';
-        }
 
         $hasType = false;
         if ($this->hasField($field . 'Types')) {
@@ -131,7 +172,13 @@ class Entity extends \Espo\ORM\Entity
             }
         }
 
-        $this->set($field . 'Ids', $ids);
+        $idsAttribute = $field . 'Ids';
+
+        $this->set($idsAttribute, $ids);
+        if (!$this->isNew() && !$this->hasFetched($idsAttribute)) {
+            $this->setFetched($idsAttribute, $ids);
+        }
+
         $this->set($field . 'Names', $names);
         if ($hasType) {
             $this->set($field . 'Types', $types);
@@ -146,7 +193,13 @@ class Entity extends \Espo\ORM\Entity
         if (!$this->hasRelation($field) || !$this->hasAttribute($field . 'Id')) return;
         if ($this->getRelationType($field) !== 'hasOne' && $this->getRelationType($field) !== 'belongsTo') return;
 
-        $entity = $this->get($field);
+        $relatedEntityType = $this->getRelationParam($field, 'entity');
+
+        $select = ['id', 'name'];
+
+        $entity = $this->get($field, [
+            'select' => $select
+        ]);
 
         $entityId = null;
         $entityName = null;
@@ -155,7 +208,13 @@ class Entity extends \Espo\ORM\Entity
             $entityName = $entity->get('name');
         }
 
-        $this->set($field . 'Id', $entityId);
+        $idAttribute = $field . 'Id';
+
+        if (!$this->isNew() && !$this->hasFetched($idAttribute)) {
+            $this->setFetched($idAttribute, $entityId);
+        }
+
+        $this->set($idAttribute, $entityId);
         $this->set($field . 'Name', $entityName);
     }
 
@@ -280,4 +339,3 @@ class Entity extends \Espo\ORM\Entity
         return false;
     }
 }
-

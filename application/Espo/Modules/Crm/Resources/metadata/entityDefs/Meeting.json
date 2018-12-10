@@ -9,7 +9,6 @@
             "type": "enum",
             "options": ["Planned", "Held", "Not Held"],
             "default": "Planned",
-            "view": "views/fields/enum-styled",
             "style": {
                 "Held": "success"
             },
@@ -88,7 +87,9 @@
             "layoutListDisabled": true,
             "columns": {
                 "status": "acceptanceStatus"
-            }
+            },
+            "additionalAttributeList": ["columns"],
+            "orderBy": "name"
         },
         "contacts": {
             "type": "linkMultiple",
@@ -97,7 +98,9 @@
             "view": "crm:views/meeting/fields/contacts",
             "columns": {
                 "status": "acceptanceStatus"
-            }
+            },
+            "additionalAttributeList": ["columns"],
+            "orderBy": "name"
         },
         "leads": {
             "type": "linkMultiple",
@@ -106,7 +109,9 @@
             "layoutListDisabled": true,
             "columns": {
                 "status": "acceptanceStatus"
-            }
+            },
+            "additionalAttributeList": ["columns"],
+            "orderBy": "name"
         },
         "createdAt": {
             "type": "datetime",
@@ -201,8 +206,8 @@
         }
     },
     "collection": {
-        "sortBy": "dateStart",
-        "asc": false
+        "orderBy": "dateStart",
+        "order": "desc"
     },
     "indexes": {
         "dateStartStatus": {

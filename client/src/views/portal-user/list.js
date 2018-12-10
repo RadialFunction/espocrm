@@ -42,7 +42,18 @@ Espo.define('views/portal-user/list', 'views/list', function (Dep) {
             this.createView('modal', viewName, {
                 scope: 'Contact',
                 primaryFilterName: 'notPortalUsers',
-                createButton: false
+                createButton: false,
+                mandatorySelectAttributeList: [
+                    'salutationName',
+                    'firstName',
+                    'lastName',
+                    'accountName',
+                    'accountId',
+                    'emailAddress',
+                    'emailAddressData',
+                    'phoneNumber',
+                    'phoneNumberData'
+                ]
             }, function (view) {
                 view.render();
 
@@ -72,7 +83,7 @@ Espo.define('views/portal-user/list', 'views/list', function (Dep) {
 
                     attributes.userName = attributes.emailAddress;
 
-                    attributes.isPortalUser = true;
+                    attributes.type = 'portal';
 
                     var router = this.getRouter();
 
@@ -85,8 +96,8 @@ Espo.define('views/portal-user/list', 'views/list', function (Dep) {
                 }, this);
 
                 this.listenToOnce(view, 'skip', function (model) {
-                    var attributes= {
-                        isPortalUser: true
+                    var attributes = {
+                        type: 'portal'
                     };
 
                     var router = this.getRouter();

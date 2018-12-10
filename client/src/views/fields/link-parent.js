@@ -32,7 +32,7 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
 
         type: 'linkParent',
 
-        listTemplate: 'fields/link/list',
+        listTemplate: 'fields/link-parent/list',
 
         detailTemplate: 'fields/link-parent/detail',
 
@@ -48,8 +48,6 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
 
         foreignScopeList: null,
 
-        AUTOCOMPLETE_RESULT_MAX_COUNT: 7,
-
         autocompleteDisabled: false,
 
         selectRecordsView: 'views/modals/select-records',
@@ -59,9 +57,13 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
         searchTypeList: ['is', 'isEmpty', 'isNotEmpty'],
 
         data: function () {
-            var nameValue = this.model.has(this.nameName) ? this.model.get(this.nameName) : this.model.get(this.idName);
+            var nameValue = this.model.get(this.nameName) ? this.model.get(this.nameName) : this.model.get(this.idName);
             if (!nameValue && this.model.get(this.idName) && this.model.get(this.typeName)) {
                 nameValue = this.translate(this.model.get(this.typeName), 'scopeNames');
+            }
+            var iconHtml = null;
+            if ((this.mode == 'detail' || this.mode == 'list' && this.displayScopeColorInListMode) && this.foreignScope) {
+                iconHtml = this.getHelper().getScopeColorIconHtml(this.foreignScope);
             }
             return _.extend({
                 idName: this.idName,
@@ -72,6 +74,8 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
                 typeValue: this.model.get(this.typeName),
                 foreignScope: this.foreignScope,
                 foreignScopeList: this.foreignScopeList,
+                valueIsSet: this.model.has(this.idName) || this.model.has(this.typeName),
+                iconHtml: iconHtml
             }, Dep.prototype.data.call(this));
         },
 
@@ -127,7 +131,9 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
                         filters: this.getSelectFilters(),
                         boolFilterList: this.getSelectBoolFilterList(),
                         primaryFilterName: this.getSelectPrimaryFilterName(),
-                        createAttributes: (this.mode === 'edit') ? this.getCreateAttributes() : null
+                        createAttributes: (this.mode === 'edit') ? this.getCreateAttributes() : null,
+                        mandatorySelectAttributeList: this.getMandatorySelectAttributeList(),
+                        forceSelectAllAttributes: this.isForceSelectAllAttributes()
                     }, function (dialog) {
                         dialog.render();
                         Espo.Ui.notify(false);
@@ -143,7 +149,7 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
                     this.trigger('change');
                 });
 
-                this.events['change select[name="' + this.typeName + '"]'] = function (e) {
+                this.events['change select[data-name="'+this.typeName+'"]'] = function (e) {
                     this.foreignScope = e.currentTarget.value;
                     this.$elementName.val('');
                     this.$elementId.val('');
@@ -152,6 +158,12 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
         },
 
         setupSearch: function () {
+            var type = this.getSearchParamsData().type;
+            if (type === 'is' || !type) {
+                this.searchData.idValue = this.getSearchParamsData().idValue || this.searchParams.valueId;
+                this.searchData.nameValue = this.getSearchParamsData().nameValue || this.searchParams.valueName;
+                this.searchData.typeValue = this.getSearchParamsData().typeValue || this.searchParams.valueType;
+            }
 
             this.events = _.extend({
                 'change select.search-type': function (e) {
@@ -175,8 +187,23 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
             this.trigger('change');
         },
 
+        getMandatorySelectAttributeList: function () {
+            this.mandatorySelectAttributeList;
+        },
+
+        isForceSelectAllAttributes: function () {
+            this.forceSelectAllAttributes;
+        },
+
+        getAutocompleteMaxCount: function () {
+            if (this.autocompleteMaxCount) {
+                return this.autocompleteMaxCount;
+            }
+            return this.getConfig().get('recordsPerPage');
+        },
+
         getAutocompleteUrl: function () {
-            var url = this.foreignScope + '?sortBy=name&maxCount=' + this.AUTOCOMPLETE_RESULT_MAX_COUNT;
+            var url = this.$elementType.val() + '?orderBy=name&maxSize=' + this.getAutocompleteMaxCount();
             var boolList = this.getSelectBoolFilterList();
             var where = [];
             if (boolList) {
@@ -191,9 +218,9 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
 
         afterRender: function () {
             if (this.mode == 'edit' || this.mode == 'search') {
-                this.$elementId = this.$el.find('input[name="' + this.idName + '"]');
-                this.$elementName = this.$el.find('input[name="' + this.nameName + '"]');
-                this.$elementType = this.$el.find('select[name="' + this.typeName + '"]');
+                this.$elementId = this.$el.find('input[data-name="' + this.idName + '"]');
+                this.$elementName = this.$el.find('input[data-name="' + this.nameName + '"]');
+                this.$elementType = this.$el.find('select[data-name="' + this.typeName + '"]');
 
                 this.$elementName.on('change', function () {
                     if (this.$elementName.val() == '') {
@@ -228,6 +255,7 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
                         }.bind(this),
                         minChars: 1,
                         paramName: 'q',
+                        triggerSelectOnValidInput: false,
                         formatResult: function (suggestion) {
                             return suggestion.name;
                         },
@@ -254,6 +282,7 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
                             }, this);
                         }.bind(this)
                     });
+                    this.$elementName.attr('autocomplete', 'espo-' + this.name);
                 }
 
                 var $elementName = this.$elementName;
@@ -286,7 +315,7 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
         validateRequired: function () {
             if (this.isRequired()) {
                 if (this.model.get(this.idName) == null || !this.model.get(this.typeName)) {
-                    var msg = this.translate('fieldIsRequired', 'messages').replace('{field}', this.translate(this.name, 'fields', this.model.name));
+                    var msg = this.translate('fieldIsRequired', 'messages').replace('{field}', this.getLabelText());
                     this.showValidationMessage(msg);
                     return true;
                 }
@@ -340,31 +369,30 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
             if (entityId) {
                 data = {
                     type: 'and',
-                    field: this.idName,
-
+                    attribute: this.idName,
                     value: [
                         {
                             type: 'equals',
                             field: this.idName,
-                            value: entityId,
+                            value: entityId
                         },
                         {
                             type: 'equals',
                             field: this.typeName,
-                            value: entityType,
+                            value: entityType
                         }
                     ],
-                    valueId: entityId,
-                    valueName: entityName,
-                    valueType: entityType,
                     data: {
-                        type: 'is'
+                        type: 'is',
+                        idValue: entityId,
+                        nameValue: entityName,
+                        typeValue: entityType
                     }
                 };
             } else {
                 data = {
                     type: 'and',
-                    field: this.idName,
+                    attribute: this.idName,
                     value: [
                         {
                             type: 'isNotNull',
@@ -373,12 +401,12 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
                         {
                             type: 'equals',
                             field: this.typeName,
-                            value: entityType,
+                            value: entityType
                         }
                     ],
-                    valueType: entityType,
                     data: {
-                        type: 'is'
+                        type: 'is',
+                        typeValue: entityType
                     }
                 };
             }
@@ -390,5 +418,3 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
         }
     });
 });
-
-

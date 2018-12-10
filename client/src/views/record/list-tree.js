@@ -78,7 +78,14 @@ Espo.define('views/record/list-tree', 'views/record/list', function (Dep) {
 
             if (this.level == 0 && this.options.hasExpandedToggler) {
                 data.hasExpandedToggler = true;
+            }
+
+            if (this.level == 0) {
                 data.isExpanded = this.isExpanded;
+            }
+
+            if (data.hasExpandedToggler || this.showEditLink) {
+                data.showRootMenu = true;
             }
 
             return data;
@@ -180,7 +187,8 @@ Espo.define('views/record/list-tree', 'views/record/list', function (Dep) {
                         level: this.level,
                         isSelected: model.id == this.selectedData.id,
                         selectedData: this.selectedData,
-                        selectable: this.selectable
+                        selectable: this.selectable,
+                        setViewBeforeCallback: this.options.skipBuildRows && !this.isRendered()
                     }, function () {
                         built++;
                         if (built == count) {
@@ -236,6 +244,18 @@ Espo.define('views/record/list-tree', 'views/record/list', function (Dep) {
                 this.listenToOnce(view, 'after:save', function (model) {
                     view.close();
                     model.set('childCollection', this.collection.createSeed());
+                    if (model.get('parentId') !== attributes.parentId) {
+                        var v = this;
+                        while (1) {
+                            if (v.level) {
+                                v = v.getParentView().getParentView();
+                            } else {
+                                break;
+                            }
+                        }
+                        v.collection.fetch();
+                        return;
+                    }
                     this.collection.push(model);
                     this.buildRows(function () {
                         this.render();
@@ -255,4 +275,3 @@ Espo.define('views/record/list-tree', 'views/record/list', function (Dep) {
 
     });
 });
-

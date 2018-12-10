@@ -52,6 +52,10 @@ class EntityManager
 
     private $reservedWordList = ['__halt_compiler', 'abstract', 'and', 'array', 'as', 'break', 'callable', 'case', 'catch', 'class', 'clone', 'const', 'continue', 'declare', 'default', 'die', 'do', 'echo', 'else', 'elseif', 'empty', 'enddeclare', 'endfor', 'endforeach', 'endif', 'endswitch', 'endwhile', 'eval', 'exit', 'extends', 'final', 'for', 'foreach', 'function', 'global', 'goto', 'if', 'implements', 'include', 'include_once', 'instanceof', 'insteadof', 'interface', 'isset', 'list', 'namespace', 'new', 'or', 'print', 'private', 'protected', 'public', 'require', 'require_once', 'return', 'static', 'switch', 'throw', 'trait', 'try', 'unset', 'use', 'var', 'while', 'xor', 'common'];
 
+    private $linkForbiddenNameList = ['posts', 'stream', 'subscription'];
+
+    private $forbiddenEntityTypeNameList = ['PortalUser', 'ApiUser', 'Timeline', 'About', 'Admin'];
+
     public function __construct(Metadata $metadata, Language $language, File\Manager $fileManager, Config $config, Container $container = null)
     {
         $this->metadata = $metadata;
@@ -79,6 +83,11 @@ class EntityManager
     protected function getLanguage()
     {
         return $this->language;
+    }
+
+    protected function getBaseLanguage()
+    {
+        return $this->container->get('baseLanguage');
     }
 
     protected function getFileManager()
@@ -123,6 +132,28 @@ class EntityManager
         return false;
     }
 
+    protected function checkRelationshipExists($name)
+    {
+        $name = ucfirst($name);
+
+        $scopeList = array_keys($this->getMetadata()->get(['scopes'], []));
+
+        foreach ($scopeList as $entityType) {
+            $relationsDefs = $this->getEntityManager()->getMetadata()->get($entityType, 'relations');
+            if (empty($relationsDefs)) continue;
+            foreach ($relationsDefs as $link => $item) {
+                if (empty($item['type'])) continue;
+                if (empty($item['relationName'])) continue;
+                if ($item['type'] === 'manyMany') {
+                    if (ucfirst($item['relationName']) === $name) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     public function create($name, $type, $params = [], $replaceData = [])
     {
         $name = ucfirst($name);
@@ -154,6 +185,10 @@ class EntityManager
             throw new Conflict('Entity \''.$name.'\' already exists.');
         }
 
+        if ($this->getMetadata()->get(['clientDefs.', $name])) {
+            throw new Conflict('Entity \''.$name.'\' already exists.');
+        }
+
         if ($this->checkControllerExists($name)) {
             throw new Conflict('Entity name \''.$name.'\' is not allowed.');
         }
@@ -163,8 +198,16 @@ class EntityManager
             throw new Conflict('Entity name \''.$name.'\' is not allowed.');
         }
 
+        if (in_array($name, $this->forbiddenEntityTypeNameList)) {
+            throw new Conflict('Entity name \''.$name.'\' is not allowed.');
+        }
+
         if (in_array(strtolower($name), $this->reservedWordList)) {
             throw new Conflict('Entity name \''.$name.'\' is not allowed.');
+        }
+
+        if ($this->checkRelationshipExists($name)) {
+            throw new Conflict('Relationship with the same name \''.$name.'\' exists.');
         }
 
         $normalizedName = Util::normilizeClassName($name);
@@ -278,6 +321,10 @@ class EntityManager
             $scopesData['isNotRemovable'] = true;
         }
 
+        if (!empty($params['kanbanStatusIgnoreList'])) {
+            $scopesData['kanbanStatusIgnoreList'] = $params['kanbanStatusIgnoreList'];
+        }
+
         $this->getMetadata()->set('scopes', $name, $scopesData);
 
         $filePath = $templatePath . "/Metadata/{$type}/entityDefs.json";
@@ -297,13 +344,25 @@ class EntityManager
             $clientDefsContents = str_replace('{'.$key.'}', $value, $clientDefsContents);
         }
         $clientDefsData = Json::decode($clientDefsContents, true);
+
+        if (array_key_exists('color', $params)) {
+            $clientDefsData['color'] = $params['color'];
+        }
+
+        if (array_key_exists('iconClass', $params)) {
+            $clientDefsData['iconClass'] = $params['iconClass'];
+        }
+
+        if (!empty($params['kanbanViewMode'])) {
+            $clientDefsData['kanbanViewMode'] = true;
+        }
         $this->getMetadata()->set('clientDefs', $name, $clientDefsData);
 
-        $this->getLanguage()->set('Global', 'scopeNames', $name, $labelSingular);
-        $this->getLanguage()->set('Global', 'scopeNamesPlural', $name, $labelPlural);
+        $this->getBaseLanguage()->set('Global', 'scopeNames', $name, $labelSingular);
+        $this->getBaseLanguage()->set('Global', 'scopeNamesPlural', $name, $labelPlural);
 
         $this->getMetadata()->save();
-        $this->getLanguage()->save();
+        $this->getBaseLanguage()->save();
 
         $layoutsPath = $templatePath . "/Layouts/{$type}";
         if ($this->getFileManager()->isDir($layoutsPath)) {
@@ -332,6 +391,11 @@ class EntityManager
             $this->getMetadata()->set('scopes', $name, $scopeData);
         }
 
+        $isCustom = false;
+        if (!empty($scopeData['isCustom'])) {
+            $isCustom = true;
+        }
+
         if (array_key_exists('statusField', $data)) {
             $scopeData['statusField'] = $data['statusField'];
             $this->getMetadata()->set('scopes', $name, $scopeData);
@@ -339,23 +403,35 @@ class EntityManager
 
         if (!empty($data['labelSingular'])) {
             $labelSingular = $data['labelSingular'];
-            $this->getLanguage()->set('Global', 'scopeNames', $name, $labelSingular);
             $labelCreate = $this->getLanguage()->translate('Create') . ' ' . $labelSingular;
+
+            $this->getLanguage()->set('Global', 'scopeNames', $name, $labelSingular);
             $this->getLanguage()->set($name, 'labels', 'Create ' . $name, $labelCreate);
+
+            if ($isCustom) {
+                $this->getBaseLanguage()->set('Global', 'scopeNames', $name, $labelSingular);
+                $this->getBaseLanguage()->set($name, 'labels', 'Create ' . $name, $labelCreate);
+            }
         }
 
         if (!empty($data['labelPlural'])) {
             $labelPlural = $data['labelPlural'];
             $this->getLanguage()->set('Global', 'scopeNamesPlural', $name, $labelPlural);
+            if ($isCustom) {
+                $this->getBaseLanguage()->set('Global', 'scopeNamesPlural', $name, $labelPlural);
+            }
         }
 
         if (isset($data['sortBy'])) {
-            $entityDefsData = array(
-                'collection' => array(
-                    'sortBy' => $data['sortBy'],
-                    'asc' => !empty($data['asc'])
-                )
-            );
+            $entityDefsData = [
+                'collection' => [
+                    'orderBy' => $data['sortBy']
+                ]
+            ];
+            if (isset($data['sortDirection'])) {
+                $entityDefsData['collection']['order'] = $data['sortDirection'];
+            }
+
             $this->getMetadata()->set('entityDefs', $name, $entityDefsData);
         }
 
@@ -368,8 +444,49 @@ class EntityManager
             $this->getMetadata()->set('entityDefs', $name, $entityDefsData);
         }
 
+
+        if (isset($data['fullTextSearch'])) {
+            $entityDefsData = [
+                'collection' => [
+                    'fullTextSearch' => !!$data['fullTextSearch']
+                ]
+            ];
+            $this->getMetadata()->set('entityDefs', $name, $entityDefsData);
+        }
+
+        if (array_key_exists('kanbanStatusIgnoreList', $data)) {
+            $scopeData['kanbanStatusIgnoreList'] = $data['kanbanStatusIgnoreList'];
+            $this->getMetadata()->set('scopes', $name, $scopeData);
+        }
+
+        if (array_key_exists('kanbanViewMode', $data)) {
+            $clientDefsData = [
+                'kanbanViewMode' => $data['kanbanViewMode']
+            ];
+            $this->getMetadata()->set('clientDefs', $name, $clientDefsData);
+        }
+
+        if (array_key_exists('color', $data)) {
+            $clientDefsData = [
+                'color' => $data['color']
+            ];
+            $this->getMetadata()->set('clientDefs', $name, $clientDefsData);
+        }
+
+        if (array_key_exists('iconClass', $data)) {
+            $clientDefsData = [
+                'iconClass' => $data['iconClass']
+            ];
+            $this->getMetadata()->set('clientDefs', $name, $clientDefsData);
+        }
+
         $this->getMetadata()->save();
         $this->getLanguage()->save();
+        if ($isCustom) {
+            if ($this->getLanguage()->getLanguage() !== $this->getBaseLanguage()->getLanguage()) {
+                $this->getBaseLanguage()->save();
+            }
+        }
 
         return true;
     }
@@ -438,10 +555,17 @@ class EntityManager
         try {
             $this->getLanguage()->delete('Global', 'scopeNames', $name);
             $this->getLanguage()->delete('Global', 'scopeNamesPlural', $name);
+
+            $this->getBaseLanguage()->delete('Global', 'scopeNames', $name);
+            $this->getBaseLanguage()->delete('Global', 'scopeNamesPlural', $name);
         } catch (\Exception $e) {}
 
         $this->getMetadata()->save();
         $this->getLanguage()->save();
+
+        if ($this->getLanguage()->getLanguage() !== $this->getBaseLanguage()->getLanguage()) {
+            $this->getBaseLanguage()->save();
+        }
 
         if ($type) {
             $this->processHook('afterRemove', $type, $name);
@@ -473,18 +597,35 @@ class EntityManager
             } else {
                 $relationName = lcfirst($entity) . $entityForeign;
             }
+            if (strlen($relationName) > 100) {
+                throw new Error('Relation name should not be longer than 100.');
+            }
+            if ($this->getMetadata()->get(['scopes', ucfirst($relationName)])) {
+                throw new Conflict("Entity with the same name '{$relationName}' exists.");
+            }
+            if ($this->checkRelationshipExists($relationName)) {
+                throw new Conflict("Relationship with the same name '{$relationName}' exists.");
+            }
         }
 
         if (empty($link) || empty($linkForeign)) {
             throw new BadRequest();
         }
 
-        if (strlen($link) > 255 || strlen($linkForeign) > 255) {
-            throw new Error('Link name should not be longer than 255.');
+        if (strlen($link) > 100 || strlen($linkForeign) > 100) {
+            throw new Error('Link name should not be longer than 100.');
         }
 
         if (is_numeric($link[0]) || is_numeric($linkForeign[0])) {
             throw new Error('Bad link name.');
+        }
+
+        if (in_array($link, $this->linkForbiddenNameList)) {
+            throw new Conflict("Link name '{$link}' is not allowed.");
+        }
+
+        if (in_array($linkForeign, $this->linkForbiddenNameList)) {
+            throw new Conflict("Link name '{$linkForeign}' is not allowed.");
         }
 
         $linkMultipleField = false;
@@ -547,7 +688,6 @@ class EntityManager
                         $link => array(
                             "type" => "linkMultiple",
                             "layoutDetailDisabled"  => !$linkMultipleField,
-                            "layoutListDisabled"  => true,
                             "layoutMassUpdateDisabled"  => !$linkMultipleField,
                             "noLoad"  => !$linkMultipleField,
                             "importDisabled" => !$linkMultipleField,
@@ -612,7 +752,6 @@ class EntityManager
                         $linkForeign => array(
                             "type" => "linkMultiple",
                             "layoutDetailDisabled"  => !$linkMultipleFieldForeign,
-                            "layoutListDisabled"  => true,
                             "layoutMassUpdateDisabled"  => !$linkMultipleFieldForeign,
                             "noLoad"  => !$linkMultipleFieldForeign,
                             "importDisabled" => !$linkMultipleFieldForeign,
@@ -636,7 +775,6 @@ class EntityManager
                         $link => array(
                             "type" => "linkMultiple",
                             "layoutDetailDisabled"  => !$linkMultipleField,
-                            "layoutListDisabled"  => true,
                             "layoutMassUpdateDisabled"  => !$linkMultipleField,
                             "importDisabled" => !$linkMultipleField,
                             "noLoad"  => !$linkMultipleField,
@@ -659,7 +797,6 @@ class EntityManager
                         $linkForeign => array(
                             "type" => "linkMultiple",
                             "layoutDetailDisabled"  => !$linkMultipleFieldForeign,
-                            "layoutListDisabled"  => true,
                             "layoutMassUpdateDisabled"  => !$linkMultipleFieldForeign,
                             "importDisabled" => !$linkMultipleFieldForeign,
                             "noLoad"  => !$linkMultipleFieldForeign,
@@ -692,8 +829,15 @@ class EntityManager
         $this->getLanguage()->set($entity, 'links', $link, $label);
         $this->getLanguage()->set($entityForeign, 'fields', $linkForeign, $labelForeign);
         $this->getLanguage()->set($entityForeign, 'links', $linkForeign, $labelForeign);
-
         $this->getLanguage()->save();
+
+        if ($this->getLanguage()->getLanguage() !== $this->getBaseLanguage()->getLanguage()) {
+            $this->getBaseLanguage()->set($entity, 'fields', $link, $label);
+            $this->getBaseLanguage()->set($entity, 'links', $link, $label);
+            $this->getBaseLanguage()->set($entityForeign, 'fields', $linkForeign, $labelForeign);
+            $this->getBaseLanguage()->set($entityForeign, 'links', $linkForeign, $labelForeign);
+            $this->getBaseLanguage()->save();
+        }
 
         return true;
     }
@@ -705,15 +849,14 @@ class EntityManager
         $entityForeign = $params['entityForeign'];
         $linkForeign = $params['linkForeign'];
 
-        $label = $params['label'];
-        $labelForeign = $params['labelForeign'];
-
         if (empty($entity) || empty($entityForeign)) {
             throw new Error();
         }
         if (empty($entityForeign) || empty($linkForeign)) {
             throw new Error();
         }
+
+        $isCustom = $this->getMetadata()->get("entityDefs.{$entity}.links.{$link}.isCustom");
 
         if (
             $this->getMetadata()->get("entityDefs.{$entity}.links.{$link}.type") == 'hasMany'
@@ -727,7 +870,6 @@ class EntityManager
                         $link => array(
                             "type" => "linkMultiple",
                             "layoutDetailDisabled"  => !$linkMultipleField,
-                            "layoutListDisabled"  => true,
                             "layoutMassUpdateDisabled"  => !$linkMultipleField,
                             "noLoad"  => !$linkMultipleField,
                             "importDisabled" => !$linkMultipleField,
@@ -752,7 +894,6 @@ class EntityManager
                         $linkForeign => array(
                             "type" => "linkMultiple",
                             "layoutDetailDisabled"  => !$linkMultipleFieldForeign,
-                            "layoutListDisabled"  => true,
                             "layoutMassUpdateDisabled"  => !$linkMultipleFieldForeign,
                             "noLoad"  => !$linkMultipleFieldForeign,
                             "importDisabled" => !$linkMultipleFieldForeign,
@@ -799,12 +940,40 @@ class EntityManager
             }
         }
 
-        $this->getLanguage()->set($entity, 'fields', $link, $label);
-        $this->getLanguage()->set($entity, 'links', $link, $label);
-        $this->getLanguage()->set($entityForeign, 'fields', $linkForeign, $labelForeign);
-        $this->getLanguage()->set($entityForeign, 'links', $linkForeign, $labelForeign);
+        $label = null;
+        if (isset($params['label'])) {
+            $label = $params['label'];
+        }
+        $labelForeign = null;
+        if (isset($params['labelForeign'])) {
+            $labelForeign = $params['labelForeign'];
+        }
+
+        if ($label) {
+            $this->getLanguage()->set($entity, 'fields', $link, $label);
+            $this->getLanguage()->set($entity, 'links', $link, $label);
+        }
+
+        if ($labelForeign) {
+            $this->getLanguage()->set($entityForeign, 'fields', $linkForeign, $labelForeign);
+            $this->getLanguage()->set($entityForeign, 'links', $linkForeign, $labelForeign);
+        }
 
         $this->getLanguage()->save();
+
+        if ($isCustom) {
+            if ($this->getBaseLanguage()->getLanguage() !== $this->getBaseLanguage()->getLanguage()) {
+                if ($label) {
+                    $this->getBaseLanguage()->set($entity, 'fields', $link, $label);
+                    $this->getBaseLanguage()->set($entity, 'links', $link, $label);
+                }
+                if ($labelForeign) {
+                    $this->getBaseLanguage()->set($entityForeign, 'fields', $linkForeign, $labelForeign);
+                    $this->getBaseLanguage()->set($entityForeign, 'links', $linkForeign, $labelForeign);
+                }
+                $this->getBaseLanguage()->save();
+            }
+        }
 
         return true;
     }
@@ -882,5 +1051,36 @@ class EntityManager
             return $hook;
         }
         return;
+    }
+
+    public function resetToDefaults($scope)
+    {
+        if ($this->isCustom($scope)) {
+            throw new Error("Can't reset to defaults custom entity type '{$scope}.'");
+        }
+
+        $this->getMetadata()->delete('scopes', $scope, [
+            'disabled',
+            'stream',
+            'statusField',
+            'kanbanStatusIgnoreList'
+        ]);
+        $this->getMetadata()->delete('clientDefs', $scope, [
+            'iconClass',
+            'statusField',
+            'kanbanViewMode'
+        ]);
+        $this->getMetadata()->delete('entityDefs', $scope, [
+            'collection.sortBy',
+            'collection.asc',
+            'collection.orderBy',
+            'collection.order',
+            'collection.textFilterFields'
+        ]);
+        $this->getMetadata()->save();
+
+        $this->getLanguage()->delete('Global', 'scopeNames', $scope);
+        $this->getLanguage()->delete('Global', 'scopeNamesPlural', $scope);
+        $this->getLanguage()->save();
     }
 }

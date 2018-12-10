@@ -34,14 +34,14 @@ Espo.define('views/scheduled-job/list', 'views/list', function (Dep) {
         setup: function () {
             Dep.prototype.setup.call(this);
 
-            this.menu.dropdown.push({
+            this.menu.buttons.push({
                 link: '#Admin/jobs',
                 html: this.translate('Jobs', 'labels', 'Admin')
             });
 
-            this.createView('search', 'Base', {
+            this.createView('search', 'views/base', {
                 el: '#main > .search-container',
-                template: 'scheduled-job.cronjob'
+                template: 'scheduled-job/cronjob'
             });
         },
 

@@ -72,9 +72,13 @@ Espo.define('ui', [], function () {
 
         this.contents = '';
         if (this.header) {
-            this.contents += '<header class="modal-header">' +
+            var headerClassName = '';
+            if (this.options.fixedHeaderHeight) {
+                headerClassName = ' fixed-height';
+            }
+            this.contents += '<header class="modal-header'+headerClassName+'">' +
                              ((this.closeButton) ? '<a href="javascript:" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span></a>' : '') +
-                             '<h4 class="modal-title">' + this.header + '</h4>' +
+                             '<h4 class="modal-title"><span class="modal-title-text">' + this.header + '</span></h4>' +
                              '</header>';
         }
 
@@ -88,18 +92,26 @@ Espo.define('ui', [], function () {
             var rightPart = '';
             this.buttons.forEach(function (o) {
                 if (o.pullLeft) return;
+                var className = '';
+                if (o.className) {
+                    className = ' ' + o.className;
+                }
                 rightPart +=
                     '<button type="button" ' + (o.disabled ? 'disabled="disabled" ' : '') +
-                    'class="btn btn-' + (o.style || 'default') + (o.disabled ? ' disabled' : '') + (o.hidden ? ' hidden' : '') + '" ' +
+                    'class="btn btn-' + (o.style || 'default') + (o.disabled ? ' disabled' : '') + (o.hidden ? ' hidden' : '') + className+'" ' +
                     'data-name="' + o.name + '"' + (o.title ? ' title="'+o.title+'"' : '') + '>' +
                     (o.html || o.text) + '</button> ';
             }, this);
             var leftPart = '';
             this.buttons.forEach(function (o) {
                 if (!o.pullLeft) return;
+                var className = '';
+                if (o.className) {
+                    className = ' ' + o.className;
+                }
                 leftPart +=
                     '<button type="button" ' + (o.disabled ? 'disabled="disabled" ' : '') +
-                    'class="btn btn-' + (o.style || 'default') + (o.disabled ? ' disabled' : '') + (o.hidden ? ' hidden' : '') + '" ' +
+                    'class="btn btn-' + (o.style || 'default') + (o.disabled ? ' disabled' : '') + (o.hidden ? ' hidden' : '') + className+'" ' +
                     'data-name="' + o.name + '"' + (o.title ? ' title="'+o.title+'"' : '') + '>' +
                     (o.html || o.text) + '</button> ';
             }, this);
@@ -217,7 +229,7 @@ Espo.define('ui', [], function () {
         var $body = $(document.body);
 
         this.$el.on('hidden.bs.modal', function (e) {
-            if ($('.modal:visible').size() > 0) {
+            if ($('.modal:visible').length > 0) {
                 $body.addClass('modal-open');
             }
         });
@@ -232,14 +244,14 @@ Espo.define('ui', [], function () {
 
         var $modalBackdrop = $('.modal-backdrop');
         $modalBackdrop.each(function (i, el) {
-            if (i < $modalBackdrop.size() - 1) {
+            if (i < $modalBackdrop.length - 1) {
                 $(el).addClass('hidden');
             }
         }.bind(this));
 
         var $modalConainer = $('.modal-container');
         $modalConainer.each(function (i, el) {
-            if (i < $modalConainer.size() - 1) {
+            if (i < $modalConainer.length - 1) {
                 $(el).addClass('overlaid');
             }
         }.bind(this));
@@ -253,6 +265,8 @@ Espo.define('ui', [], function () {
                 return this.backdrop == 'static' ? this.$el[0].focus() : this.close();
             }
         }.bind(this));
+
+        $('body > .popover').addClass('hidden');
     };
     Dialog.prototype.hide = function () {
         this.$el.find('.modal-content').addClass('hidden');
@@ -262,7 +276,7 @@ Espo.define('ui', [], function () {
         $modalBackdrop.last().removeClass('hidden');
 
         var $modalConainer = $('.modal-container');
-        $($modalConainer.get($modalConainer.size() - 2)).removeClass('overlaid');
+        $($modalConainer.get($modalConainer.length - 2)).removeClass('overlaid');
 
         this.$el.modal('hide');
         $(this).trigger('dialog:close');

@@ -46,6 +46,15 @@
          "type":"varchar"
       },
       {
+         "type": "bool",
+         "name":"useNumericFormat"
+      },
+      {
+         "type": "enumInt",
+         "name": "minuteStep",
+         "options": [30, 15, 10, 5, 1]
+      },
+      {
          "name":"audited",
          "type":"bool"
       },
@@ -57,5 +66,6 @@
    "filter": true,
    "fieldDefs":{
       "notNull":false
-   }
+   },
+   "personalData": true
 }

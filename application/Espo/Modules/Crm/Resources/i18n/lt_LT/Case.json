@@ -9,12 +9,11 @@
     "priority": "Prioritetas",
     "type": "Tipas",
     "description": "Aprašymas",
-    "inboundEmail": "Gaunami el. laiškai",
     "lead": "Potencialus klientas",
-    "attachments": "Prisegtukai"
+    "attachments": "Prisegtukai",
+    "inboundEmail": "Grupės el. Pašto sąskaita"
   },
   "links": {
-    "inboundEmail": "Gaunami el. laiškai",
     "account": "Įmonė",
     "contact": "Kontaktas (pirminis)",
     "Contacts": "Kontaktai",
@@ -24,7 +23,8 @@
     "emails": "El. laiška",
     "articles": "Žinių bazės straipsniai",
     "lead": "Potencialus klientas",
-    "attachments": "Prisegtukai"
+    "attachments": "Prisegtukai",
+    "inboundEmail": "Grupės el. Pašto sąskaita"
   },
   "options": {
     "status": {

@@ -55,6 +55,12 @@ Espo.define('controllers/admin', ['controller', 'search-manager'], function (Dep
             this.main('views/admin/label-manager/index', {scope: scope, language: language});
         },
 
+        templateManager: function (options) {
+            var name = options.name || null;
+
+            this.main('views/admin/template-manager/index', {name: name});
+        },
+
         fieldManager: function (options) {
             var scope = options.scope || null;
             var field = options.field || null;
@@ -76,6 +82,10 @@ Espo.define('controllers/admin', ['controller', 'search-manager'], function (Dep
 
         upgrade: function (options) {
             this.main('views/admin/upgrade/index');
+        },
+
+        systemRequirements: function (options) {
+            this.main('views/admin/system-requirements/index');
         },
 
         getSettingsModel: function () {
@@ -170,6 +180,21 @@ Espo.define('controllers/admin', ['controller', 'search-manager'], function (Dep
             }, this);
         },
 
+        authLog: function () {
+            this.collectionFactory.create('AuthLogRecord', function (collection) {
+                var searchManager = new SearchManager(collection, 'list', this.getStorage(), this.getDateTime());
+                searchManager.loadStored();
+                collection.where = searchManager.getWhere();
+                collection.maxSize = this.getConfig().get('recordsPerPage') || collection.maxSize;
+
+                this.main('views/admin/auth-log-record/list', {
+                    scope: 'AuthLogRecord',
+                    collection: collection,
+                    searchManager: searchManager
+                });
+            }, this);
+        },
+
         jobs: function () {
             this.collectionFactory.create('Job', function (collection) {
                 var searchManager = new SearchManager(collection, 'list', this.getStorage(), this.getDateTime());
@@ -208,6 +233,20 @@ Espo.define('controllers/admin', ['controller', 'search-manager'], function (Dep
                     model: model,
                     headerTemplate: 'admin/settings/headers/authentication',
                     recordView: 'views/admin/authentication'
+                });
+            }, this);
+            model.fetch();
+        },
+
+        jobsSettings: function () {
+            var model = this.getSettingsModel();
+
+            model.once('sync', function () {
+                model.id = '1';
+                this.main('views/settings/edit', {
+                    model: model,
+                    headerTemplate: 'admin/settings/headers/jobs-settings',
+                    recordView: 'views/admin/jobs-settings'
                 });
             }, this);
             model.fetch();

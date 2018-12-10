@@ -27,9 +27,29 @@
  ************************************************************************/
 
 Espo.define('utils', [], function () {
+
     var Utils = Espo.utils = Espo.Utils = {
 
-        checkActionAccess: function (acl, obj, item) {
+        handleAction: function (viewObject, e) {
+            var $target = $(e.currentTarget);
+            var action = $target.data('action');
+            if (action) {
+                var data = $target.data();
+                var method = 'action' + Espo.Utils.upperCaseFirst(action);
+                if (typeof viewObject[method] == 'function') {
+                    viewObject[method].call(viewObject, data, e);
+                    e.preventDefault();
+                } else if (data.handler) {
+                    e.preventDefault();
+                    require(data.handler, function (Handler) {
+                        var handler = new Handler(viewObject);
+                        handler[method].call(handler, data, e);
+                    });
+                }
+            }
+        },
+
+        checkActionAccess: function (acl, obj, item, isPrecise) {
             var hasAccess = true;
             if (item.acl) {
                 if (!item.aclScope) {
@@ -37,7 +57,7 @@ Espo.define('utils', [], function () {
                         if (typeof obj == 'string' || obj instanceof String) {
                             hasAccess = acl.check(obj, item.acl);
                         } else {
-                            hasAccess = acl.checkModel(obj, item.acl);
+                            hasAccess = acl.checkModel(obj, item.acl, isPrecise);
                         }
                     } else {
                         hasAccess = acl.check(item.scope, item.acl);
@@ -256,4 +276,3 @@ Espo.define('utils', [], function () {
     return Utils;
 
 });
-

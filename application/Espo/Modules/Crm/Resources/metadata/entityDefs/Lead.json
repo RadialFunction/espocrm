@@ -1,7 +1,8 @@
 {
     "fields": {
         "name": {
-            "type": "personName"
+            "type": "personName",
+            "isPersonalData": true
         },
         "salutationName": {
             "type": "enum",
@@ -27,7 +28,6 @@
             "type": "enum",
             "options": ["New", "Assigned", "In Process", "Converted", "Recycled", "Dead"],
             "default": "New",
-            "view": "views/fields/enum-styled",
             "style": {
                 "Converted": "success",
                 "Recycled": "danger",
@@ -56,10 +56,12 @@
             "readOnly": true
         },
         "website": {
-            "type": "url"
+            "type": "url",
+            "strip": true
         },
         "address": {
-            "type": "address"
+            "type": "address",
+            "isPersonalData": true
         },
         "addressStreet": {
             "type": "text",
@@ -83,12 +85,14 @@
             "trim": true
         },
         "emailAddress": {
-            "type": "email"
+            "type": "email",
+            "isPersonalData": true
         },
         "phoneNumber": {
             "type": "phone",
             "typeList": ["Mobile", "Office", "Home", "Fax", "Other"],
-            "defaultType": "Mobile"
+            "defaultType": "Mobile",
+            "isPersonalData": true
         },
         "doNotCall": {
             "type": "bool"
@@ -190,6 +194,12 @@
             "layoutMassUpdateDisabled": true,
             "layoutFiltersDisabled": true,
             "entity": "TargetList"
+        },
+        "targetListIsOptedOut": {
+            "type": "bool",
+            "notStorable": true,
+            "readOnly": true,
+            "disabled": true
         }
     },
     "links": {
@@ -307,8 +317,8 @@
         }
     },
     "collection": {
-        "sortBy": "createdAt",
-        "asc": false,
+        "orderBy": "createdAt",
+        "order": "desc",
         "textFilterFields": ["name", "accountName", "emailAddress"]
     },
     "indexes": {

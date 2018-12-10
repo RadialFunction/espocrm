@@ -59,16 +59,7 @@ Espo.define('views/modal', 'view', function (Dep) {
 
         events: {
             'click .action': function (e) {
-                var $target = $(e.currentTarget);
-                var action = $target.data('action');
-                var data = $target.data();
-                if (action) {
-                    var method = 'action' + Espo.Utils.upperCaseFirst(action);
-                    if (typeof this[method] == 'function') {
-                        e.preventDefault();
-                        this[method].call(this, data);
-                    }
-                }
+                Espo.Utils.handleAction(this, e);
             }
         },
 
@@ -151,6 +142,7 @@ Espo.define('views/modal', 'view', function (Dep) {
                     footerAtTheTop: this.getThemeManager().getParam('modalFooterAtTheTop'),
                     fullHeight: this.getThemeManager().getParam('modalFullHeight'),
                     screenWidthXs: this.getThemeManager().getParam('screenWidthXs'),
+                    fixedHeaderHeight: this.fixedHeaderHeight,
                     onRemove: function () {
                         this.onDialogClose();
                     }.bind(this)
@@ -265,4 +257,3 @@ Espo.define('views/modal', 'view', function (Dep) {
         },
     });
 });
-

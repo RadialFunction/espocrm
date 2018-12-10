@@ -22,7 +22,9 @@
       },
       "country":{
          "type":"varchar",
-         "trim": true
+         "trim": true,
+         "view": "views/fields/address-country",
+         "customizationOptionsDisabled": true
       },
       "postalCode":{
          "type":"varchar",
@@ -34,11 +36,14 @@
          "readOnly": true,
          "layoutListDisabled": true,
          "provider": "Google",
-         "height": 300
+         "height": 300,
+         "exportDisabled": true,
+         "importDisabled": true
       }
    },
    "notMergeable":true,
    "notCreatable": false,
    "filter": true,
-   "skipOrmDefs": true
+   "skipOrmDefs": true,
+   "personalData": true
 }

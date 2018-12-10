@@ -9,7 +9,6 @@
             "type": "enum",
             "options": ["Planned", "Held", "Not Held"],
             "default": "Planned",
-            "view": "views/fields/enum-styled",
             "style": {
                 "Held": "success"
             },
@@ -93,25 +92,31 @@
             "view": "crm:views/meeting/fields/users",
             "columns": {
                 "status": "acceptanceStatus"
-            }
+            },
+            "additionalAttributeList": ["columns"],
+            "orderBy": "name"
         },
         "contacts": {
             "type": "linkMultiple",
             "layoutDetailDisabled": true,
             "layoutListDisabled": true,
-            "view": "crm:views/meeting/fields/contacts",
+            "view": "crm:views/call/fields/contacts",
             "columns": {
                 "status": "acceptanceStatus"
-            }
+            },
+            "additionalAttributeList": ["columns"],
+            "orderBy": "name"
         },
         "leads": {
             "type": "linkMultiple",
             "layoutDetailDisabled": true,
             "layoutListDisabled": true,
-            "view": "crm:views/meeting/fields/attendees",
+            "view": "crm:views/call/fields/leads",
             "columns": {
                 "status": "acceptanceStatus"
-            }
+            },
+            "additionalAttributeList": ["columns"],
+            "orderBy": "name"
         },
         "createdAt": {
             "type": "datetime",
@@ -130,6 +135,11 @@
             "type": "link",
             "readOnly": true,
             "view": "views/fields/user"
+        },
+        "phoneNumbersMap": {
+            "type": "jsonObject",
+            "notStorable": true,
+            "disabled": true
         },
         "assignedUser": {
             "type": "link",
@@ -206,8 +216,8 @@
         }
     },
     "collection": {
-        "sortBy": "dateStart",
-        "asc": false
+        "orderBy": "dateStart",
+        "order": "desc"
     },
     "indexes": {
         "dateStartStatus": {

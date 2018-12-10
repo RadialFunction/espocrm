@@ -53,6 +53,8 @@ class DataManager
      */
     public function rebuild($entityList = null)
     {
+        $this->populateConfigParameters();
+
         $result = $this->clearCache();
 
         $result &= $this->rebuildMetadata();
@@ -128,18 +130,21 @@ class DataManager
         $metadata = $this->getContainer()->get('metadata');
         $entityManager = $this->getContainer()->get('entityManager');
 
-        $jobs = $metadata->get(['entityDefs', 'ScheduledJob', 'jobs'], array());
+        $jobs = $metadata->get(['entityDefs', 'ScheduledJob', 'jobs'], []);
+
+        $systemJobNameList = [];
 
         foreach ($jobs as $jobName => $defs) {
             if ($jobName && !empty($defs['isSystem']) && !empty($defs['scheduling'])) {
+                $systemJobNameList[] = $jobName;
                 if (!$entityManager->getRepository('ScheduledJob')->where(array(
                     'job' => $jobName,
                     'status' => 'Active',
                     'scheduling' => $defs['scheduling']
                 ))->findOne()) {
-                    $job = $entityManager->getRepository('ScheduledJob')->where(array(
+                    $job = $entityManager->getRepository('ScheduledJob')->where([
                         'job' => $jobName
-                    ))->findOne();
+                    ])->findOne();
                     if ($job) {
                         $entityManager->removeEntity($job);
                     }
@@ -148,29 +153,61 @@ class DataManager
                         $name = $defs['name'];
                     }
                     $job = $entityManager->getEntity('ScheduledJob');
-                    $job->set(array(
+                    $job->set([
                         'job' => $jobName,
                         'status' => 'Active',
                         'scheduling' => $defs['scheduling'],
                         'isInternal' => true,
                         'name' => $name
-                    ));
+                    ]);
                     $entityManager->saveEntity($job);
                 }
             }
         }
+
+        $internalScheduledJobList = $entityManager->getRepository('ScheduledJob')->where([
+            'isInternal' => true
+        ])->find();
+        foreach ($internalScheduledJobList as $scheduledJob) {
+            $jobName = $scheduledJob->get('job');
+            if (!in_array($jobName, $systemJobNameList)) {
+                $entityManager->getRepository('ScheduledJob')->deleteFromDb($scheduledJob->id);
+            }
+        }
     }
 
-    /**
-     * Update cache timestamp
-     *
-     * @return bool
-     */
     public function updateCacheTimestamp()
     {
         $this->getContainer()->get('config')->updateCacheTimestamp();
         $this->getContainer()->get('config')->save();
+
         return true;
     }
-}
 
+    protected function populateConfigParameters()
+    {
+        $config = $this->getContainer()->get('config');
+
+        $pdo = $this->getContainer()->get('entityManager')->getPDO();
+        $query = "SHOW VARIABLES LIKE 'ft_min_word_len'";
+        $sth = $pdo->prepare($query);
+        $sth->execute();
+
+        $fullTextSearchMinLength = null;
+        if ($row = $sth->fetch(\PDO::FETCH_ASSOC)) {
+            if (isset($row['Value'])) {
+                $fullTextSearchMinLength = intval($row['Value']);
+            }
+        }
+
+        $config->set('fullTextSearchMinLength', $fullTextSearchMinLength);
+
+        $cryptKey = $config->get('cryptKey');
+        if (!$cryptKey) {
+            $cryptKey = \Espo\Core\Utils\Util::generateKey();
+            $config->set('cryptKey', $cryptKey);
+        }
+
+        $config->save();
+    }
+}

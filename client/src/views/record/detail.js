@@ -44,10 +44,7 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
 
         detailLayout: null,
 
-        /**
-         * @property {string} or {bool} ['both', 'top', 'bottom', false, true] Where to display buttons.
-         */
-        buttonsPosition: 'top',
+        buttonsDisabled: false,
 
         columnCount: 2,
 
@@ -124,16 +121,7 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
 
         events: {
             'click .button-container .action': function (e) {
-                var $target = $(e.currentTarget);
-                var action = $target.data('action');
-                var data = $target.data();
-                if (action) {
-                    var method = 'action' + Espo.Utils.upperCaseFirst(action);
-                    if (typeof this[method] == 'function') {
-                        this[method].call(this, data, e);
-                        e.preventDefault();
-                    }
-                }
+                Espo.Utils.handleAction(this, e);
             }
         },
 
@@ -142,7 +130,15 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                 this.setEditMode();
                 $(window).scrollTop(0);
             } else {
-                this.getRouter().navigate('#' + this.scope + '/edit/' + this.model.id, {trigger: true});
+                var options = {
+                    id: this.model.id,
+                    model: this.model
+                };
+                if (this.options.rootUrl) {
+                    options.rootUrl = this.options.rootUrl;
+                }
+                this.getRouter().navigate('#' + this.scope + '/edit/' + this.model.id, {trigger: false});
+                this.getRouter().dispatch(this.scope, 'edit', options);
             }
         },
 
@@ -151,7 +147,7 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
         },
 
         actionSave: function () {
-            if (this.save()) {
+            if (this.save(null, true)) {
                 this.setDetailMode();
                 $(window).scrollTop(0)
             }
@@ -237,6 +233,23 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                     });
                 }
             }
+
+            if (this.type === 'detail' && this.getMetadata().get(['scopes', this.scope, 'hasPersonalData'])) {
+                if (this.getAcl().get('dataPrivacyPermission') !== 'no') {
+                    this.dropdownItemList.push({
+                        'label': 'View Personal Data',
+                        'name': 'viewPersonalData'
+                    });
+                }
+            }
+        },
+
+        disableActionItems: function () {
+            this.disableButtons();
+        },
+
+        enableActionItems: function () {
+            this.enableButtons();
         },
 
         hideActionItem: function (name) {
@@ -332,7 +345,35 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
         },
 
         afterRender: function () {
-            var $container = this.$el.find('.detail-button-container');
+            this.initStickableButtonsContainer();
+            this.initFieldsControlBehaviour();
+        },
+
+        initFieldsControlBehaviour: function () {
+            var fields = this.getFieldViews();
+
+            var fieldInEditMode = null;
+            for (var field in fields) {
+                var fieldView = fields[field];
+                this.listenTo(fieldView, 'edit', function (view) {
+                    if (fieldInEditMode && fieldInEditMode.mode == 'edit') {
+                        fieldInEditMode.inlineEditClose();
+                    }
+                    fieldInEditMode = view;
+                }, this);
+
+                this.listenTo(fieldView, 'inline-edit-on', function () {
+                    this.inlineEditModeIsOn = true;
+                }, this);
+                this.listenTo(fieldView, 'inline-edit-off', function () {
+                    this.inlineEditModeIsOn = false;
+                    this.setIsNotChanged();
+                }, this);
+            }
+        },
+
+        initStickableButtonsContainer: function () {
+           var $container = this.$el.find('.detail-button-container');
 
             var stickTop = this.getThemeManager().getParam('stickTop') || 62;
             var blockHeight = this.getThemeManager().getParam('blockHeight') || 21;
@@ -355,7 +396,7 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                 var edge = $middle.position().top + $middle.outerHeight(true);
                 var scrollTop = $window.scrollTop();
 
-                if (scrollTop < edge) {
+                if (scrollTop < edge || this.stickButtonsContainerAllTheWay) {
                     if (scrollTop > stickTop) {
                         if (!$container.hasClass('stick-sub')) {
                             $container.addClass('stick-sub');
@@ -385,27 +426,6 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                     $block.show();
                 }
             }.bind(this));
-
-            var fields = this.getFieldViews();
-
-            var fieldInEditMode = null;
-            for (var field in fields) {
-                var fieldView = fields[field];
-                this.listenTo(fieldView, 'edit', function (view) {
-                    if (fieldInEditMode && fieldInEditMode.mode == 'edit') {
-                        fieldInEditMode.inlineEditClose();
-                    }
-                    fieldInEditMode = view;
-                }, this);
-
-                this.listenTo(fieldView, 'inline-edit-on', function () {
-                    this.inlineEditModeIsOn = true;
-                }, this);
-                this.listenTo(fieldView, 'inline-edit-off', function () {
-                    this.inlineEditModeIsOn = false;
-                    this.setIsNotChanged();
-                }, this);
-            }
         },
 
         fetch: function () {
@@ -552,6 +572,9 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
             return view || null;
         },
 
+        // TODO remove
+        handleDataBeforeRender: function (data) {},
+
         data: function () {
             var navigateButtonsEnabled = !this.navigateButtonsDisabled && !!this.model.collection;
 
@@ -587,8 +610,7 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                 dropdownItemList: this.dropdownItemList,
                 dropdownEditItemList: this.dropdownEditItemList,
                 dropdownItemListEmpty: this.isDropdownItemListEmpty(),
-                buttonsTop: this.buttonsPosition === 'both' || this.buttonsPosition === true || this.buttonsPosition === 'top',
-                buttonsBottom: this.buttonsPosition === 'both' || this.buttonsPosition === true || this.buttonsPosition === 'bottom',
+                buttonsDisabled: this.buttonsDisabled,
                 name: this.name,
                 id: this.id,
                 isWide: this.isWide,
@@ -690,8 +712,12 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                 }
             }
 
-            if ('buttonsPosition' in this.options) {
-                this.buttonsPosition = this.options.buttonsPosition;
+            this.buttonsDisabled = this.options.buttonsDisabled || this.buttonsDisabled;
+
+            // for backward compatibility
+            // TODO remove in 5.6.0
+            if ('buttonsPosition' in this.options && !this.options.buttonsPosition) {
+                this.buttonsDisabled = true;
             }
 
             if ('isWide' in this.options) {
@@ -769,14 +795,14 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
 
                     this.listenTo(this.model, 'change', function (model, o) {
                         if ('onChange' in this.dynamicHandler) {
-                            this.dynamicHandler.onChange(model, o);
+                            this.dynamicHandler.onChange.call(this.dynamicHandler, model, o);
                         }
 
                         var changedAttributes = model.changedAttributes();
                         for (var attribute in changedAttributes) {
                             var methodName = 'onChange' + Espo.Utils.upperCaseFirst(attribute);
                             if (methodName in this.dynamicHandler) {
-                                this.dynamicHandler[methodName](model, changedAttributes[attribute], o);
+                                this.dynamicHandler[methodName].call(this.dynamicHandler, model, changedAttributes[attribute], o);
                             }
                         }
                     }, this);
@@ -863,6 +889,19 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
             }
         },
 
+        actionViewPersonalData: function () {
+            this.createView('viewPersonalData', 'views/personal-data/modals/personal-data', {
+                model: this.model
+            }, function (view) {
+                view.render();
+
+                this.listenToOnce(view, 'erase', function () {
+                    this.clearView('viewPersonalData');
+                    this.model.fetch();
+                }, this);
+            });
+        },
+
         actionPrintPdf: function () {
             this.createView('pdfTemplate', 'views/modals/select-template', {
                 entityType: this.model.name
@@ -939,33 +978,32 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                 sideView.setReadOnly();
             }
 
-            var fieldViews = this.getFieldViews();
-            for (var i in fieldViews) {
-                fieldViews[i].setReadOnly();
-            }
+            this.getFieldList().forEach(function (field) {
+                this.setFieldReadOnly(field);
+            }, this);
         },
 
-        setNotReadOnly: function () {
+        setNotReadOnly: function (onlyNotSetAsReadOnly) {
             if (!this.readOnlyLocked) {
                 this.readOnly = false;
             }
 
             var bottomView = this.getView('bottom');
             if (bottomView && 'setNotReadOnly' in bottomView) {
-                bottomView.setNotReadOnly();
+                bottomView.setNotReadOnly(onlyNotSetAsReadOnly);
             }
 
             var sideView = this.getView('side');
             if (sideView && 'setNotReadOnly' in sideView) {
-                sideView.setNotReadOnly();
+                sideView.setNotReadOnly(onlyNotSetAsReadOnly);
             }
 
-            var fieldViews = this.getFieldViews();
-
-            for (var i in fieldViews) {
-                var fieldView = fieldViews[i];
-                fieldView.setNotReadOnly();
-            }
+            this.getFieldList().forEach(function (field) {
+                if (onlyNotSetAsReadOnly) {
+                    if (this.recordHelper.getFieldStateParam(field, 'readOnly')) return;
+                }
+                this.setFieldNotReadOnly(field);
+            }, this);
         },
 
         manageAccessEdit: function (second) {
@@ -997,7 +1035,7 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                 }
                 if (!this.readOnlyLocked) {
                     if (this.readOnly && second) {
-                        this.setNotReadOnly();
+                        this.setNotReadOnly(true);
                     }
                     this.readOnly = false;
                 }
@@ -1033,12 +1071,40 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
             this.manageAccessDelete();
         },
 
+        addButton: function (o) {
+            var name = o.name;
+            if (!name) return;
+            for (var i in this.buttonList) {
+                if (this.buttonList[i].name == name) {
+                    return;
+                }
+            }
+            this.buttonList.push(o);
+        },
+
+        addDropdownItem: function (o) {
+            if (!o) {
+                this.dropdownItemList.push(false);
+                return;
+            }
+            var name = o.name;
+            if (!name) return;
+            for (var i in this.dropdownItemList) {
+                if (this.dropdownItemList[i].name == name) {
+                    return;
+                }
+            }
+            this.dropdownItemList.push(o);
+        },
+
         enableButtons: function () {
-            this.$el.find(".button-container button").removeAttr('disabled');
+            this.$el.find(".button-container .action").removeAttr('disabled').removeClass('disabled');
+            this.$el.find(".button-container .dropdown-toggle").removeAttr('disabled').removeClass('disabled');
         },
 
         disableButtons: function () {
-            this.$el.find(".button-container button").attr('disabled', 'disabled');
+            this.$el.find(".button-container .action").attr('disabled', 'disabled').addClass('disabled');
+            this.$el.find(".button-container .dropdown-toggle").attr('disabled', 'disabled').addClass('disabled');
         },
 
         removeButton: function (name) {
@@ -1073,6 +1139,16 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                 panel.name = simplifiedLayout[p].name || null;
                 panel.style = simplifiedLayout[p].style || 'default';
                 panel.rows = [];
+
+                if (simplifiedLayout[p].dynamicLogicVisible) {
+                    if (!panel.name) {
+                        panel.name = 'panel-' + p.toString();
+                    }
+                    if (this.dynamicLogic) {
+                        this.dynamicLogic.addPanelVisibleCondition(panel.name, simplifiedLayout[p].dynamicLogicVisible);
+                    }
+                }
+
                 for (var i in simplifiedLayout[p].rows) {
                     var row = [];
 
@@ -1147,8 +1223,9 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                         }
 
                         var cell = {
-                            name: name,
+                            name: name + 'Field',
                             view: viewName,
+                            field: name,
                             el: el + ' .middle .field[data-name="' + name + '"]',
                             fullWidth: fullWidth,
                             options: o
@@ -1308,9 +1385,22 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                     });
                     return;
                 }
-                url = this.options.rootUrl || '#' + this.scope;
                 if (this.model.id) {
                     url = '#' + this.scope + '/view/' + this.model.id;
+
+                    if (!this.returnDispatchParams) {
+                        this.getRouter().navigate(url, {trigger: false});
+                        var options = {
+                            id: this.model.id,
+                            model: this.model
+                        };
+                        if (this.options.rootUrl) {
+                            options.rootUrl = this.options.rootUrl;
+                        }
+                        this.getRouter().dispatch(this.scope, 'view', options);
+                    }
+                } else {
+                    url = this.options.rootUrl || '#' + this.scope;
                 }
             }
 

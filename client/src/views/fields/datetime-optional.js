@@ -71,7 +71,7 @@ Espo.define('views/fields/datetime-optional', 'views/fields/datetime', function 
             var $time = this.$time;
 
             $time.timepicker({
-                step: 30,
+                step: this.params.minuteStep || 30,
                 scrollDefaultNow: true,
                 timeFormat: this.timeFormatMap[this.getDateTime().timeFormat],
                 noneOption: [{
@@ -87,8 +87,8 @@ Espo.define('views/fields/datetime-optional', 'views/fields/datetime', function 
         fetch: function () {
             var data = {};
 
-            var date = this.$el.find('[name="' + this.name + '"]').val();
-            var time = this.$el.find('[name="' + this.name + '-time"]').val();
+            var date = this.$date.val();
+            var time = this.$time.val();
 
             var value = null;
             if (time != this.noneOption && time != '') {
@@ -98,11 +98,18 @@ Espo.define('views/fields/datetime-optional', 'views/fields/datetime', function 
                 data[this.name] = value;
                 data[this.nameDate] = null;
             } else {
-                data[this.name] = null;
                 if (date != '') {
                     data[this.nameDate] = this.getDateTime().fromDisplayDate(date);
+                    var dateTimeValue = data[this.nameDate] + ' 00:00:00';
+
+                    dateTimeValue = moment.utc(dateTimeValue)
+                        .tz(this.getConfig().get('timeZone') || 'UTC')
+                        .format(this.getDateTime().internalDateTimeFullFormat);
+
+                    data[this.name] = dateTimeValue;
                 } else {
                     data[this.nameDate] = null;
+                    data[this.name] = null;
                 }
             }
             return data;
@@ -116,7 +123,7 @@ Espo.define('views/fields/datetime-optional', 'views/fields/datetime', function 
                 var otherValue = this.model.get(field) || this.model.get(fieldDate);
                 if (value && otherValue) {
                     if (moment(value).unix() <= moment(otherValue).unix()) {
-                        var msg = this.translate('fieldShouldAfter', 'messages').replace('{field}', this.translate(this.name, 'fields', this.model.name))
+                        var msg = this.translate('fieldShouldAfter', 'messages').replace('{field}', this.getLabelText())
                                                                                 .replace('{otherField}', this.translate(field, 'fields', this.model.name));
 
                         this.showValidationMessage(msg);
@@ -134,7 +141,7 @@ Espo.define('views/fields/datetime-optional', 'views/fields/datetime', function 
                 var otherValue = this.model.get(field) || this.model.get(fieldDate);
                 if (value && otherValue) {
                     if (moment(value).unix() >= moment(otherValue).unix()) {
-                        var msg = this.translate('fieldShouldBefore', 'messages').replace('{field}', this.translate(this.name, 'fields', this.model.name))
+                        var msg = this.translate('fieldShouldBefore', 'messages').replace('{field}', this.getLabelText())
                                                                                  .replace('{otherField}', this.translate(field, 'fields', this.model.name));
                         this.showValidationMessage(msg);
                         return true;
@@ -146,7 +153,7 @@ Espo.define('views/fields/datetime-optional', 'views/fields/datetime', function 
         validateRequired: function () {
             if (this.isRequired()) {
                 if (this.model.get(this.name) === null && this.model.get(this.nameDate) === null) {
-                    var msg = this.translate('fieldIsRequired', 'messages').replace('{field}', this.translate(this.name, 'fields', this.model.name));
+                    var msg = this.translate('fieldIsRequired', 'messages').replace('{field}', this.getLabelText());
                     this.showValidationMessage(msg);
                     return true;
                 }

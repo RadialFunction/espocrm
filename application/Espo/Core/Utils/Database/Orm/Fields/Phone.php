@@ -38,6 +38,7 @@ class Phone extends Base
                 'fields' => array(
                     $fieldName => array(
                         'select' => 'phoneNumbers.name',
+                        'fieldType' => 'phone',
                         'where' =>
                         array (
                             'LIKE' => \Espo\Core\Utils\Util::toUnderScore($entityName) . ".id IN (
@@ -85,34 +86,76 @@ class Phone extends Base
                         'type' => 'text',
                         'notStorable' => true
                     ),
+                    $fieldName . 'Numeric' => [
+                        'type' => 'varchar',
+                        'notStorable' => true,
+                        'where' => [
+                            'LIKE' => \Espo\Core\Utils\Util::toUnderScore($entityName) . ".id IN (
+                                SELECT entity_id
+                                FROM entity_phone_number
+                                JOIN phone_number ON phone_number.id = entity_phone_number.phone_number_id
+                                WHERE
+                                    entity_phone_number.deleted = 0 AND entity_phone_number.entity_type = '{$entityName}' AND
+                                    phone_number.deleted = 0 AND phone_number.numeric LIKE {value}
+                            )",
+                            '=' => [
+                                'leftJoins' => [['phoneNumbers', 'phoneNumbersNumericMultiple']],
+                                'sql' => 'phoneNumbersNumericMultiple.numeric = {value}',
+                                'distinct' => true
+                            ],
+                            '<>' => [
+                                'leftJoins' => [['phoneNumbers', 'phoneNumbersNumericMultiple']],
+                                'sql' => 'phoneNumbersNumericMultiple.numeric <> {value}',
+                                'distinct' => true
+                            ],
+                            'IN' => [
+                                'leftJoins' => [['phoneNumbers', 'phoneNumbersNumericMultiple']],
+                                'sql' => 'phoneNumbersNumericMultiple.numeric IN {value}',
+                                'distinct' => true
+                            ],
+                            'NOT IN' => [
+                                'leftJoins' => [['phoneNumbers', 'phoneNumbersNumericMultiple']],
+                                'sql' => 'phoneNumbersNumericMultiple.numeric NOT IN {value}',
+                                'distinct' => true
+                            ],
+                            'IS NULL' => [
+                                'leftJoins' => [['phoneNumbers', 'phoneNumbersNumericMultiple']],
+                                'sql' => 'phoneNumbersNumericMultiple.numeric IS NULL',
+                                'distinct' => true
+                            ],
+                            'IS NOT NULL' => [
+                                'leftJoins' => [['phoneNumbers', 'phoneNumbersNumericMultiple']],
+                                'sql' => 'phoneNumbersNumericMultiple.numeric IS NOT NULL',
+                                'distinct' => true
+                            ]
+                        ]
+                    ]
                 ),
-                'relations' => array(
-                    'phoneNumbers' => array(
+                'relations' => [
+                    'phoneNumbers' => [
                         'type' => 'manyMany',
                         'entity' => 'PhoneNumber',
                         'relationName' => 'entityPhoneNumber',
-                        'midKeys' => array(
-                            'entity_id',
-                            'phone_number_id',
-                        ),
-                        'conditions' => array(
-                            'entityType' => $entityName,
-                        ),
-                        'additionalColumns' => array(
-                            'entityType' => array(
+                        'midKeys' => [
+                            'entityId',
+                            'phoneNumberId'
+                        ],
+                        'conditions' => [
+                            'entityType' => $entityName
+                        ],
+                        'additionalColumns' => [
+                            'entityType' => [
                                 'type' => 'varchar',
-                                'len' => 100,
-                            ),
-                            'primary' => array(
+                                'len' => 100
+                            ],
+                            'primary' => [
                                 'type' => 'bool',
-                                'default' => false,
-                            ),
-                        ),
-                    ),
-                ),
-            ),
+                                'default' => false
+                            ]
+                        ]
+                    ]
+                ]
+            )
         );
     }
-
 }
-

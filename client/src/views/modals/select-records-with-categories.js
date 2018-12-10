@@ -47,14 +47,22 @@ Espo.define('views/modals/select-records-with-categories', ['views/modals/select
         },
 
         setup: function () {
-            Dep.prototype.setup.call(this);
+            this.scope = this.entityType = this.options.scope || this.scope;
+            this.categoryScope = this.categoryScope || this.scope + 'Category';
+
             this.categoriesDisabled = this.categoriesDisabled ||
                                    this.getMetadata().get('scopes.' + this.categoryScope + '.disabled') ||
                                    !this.getAcl().checkScope(this.categoryScope);
+
+            Dep.prototype.setup.call(this);
+
+
         },
 
         loadList: function () {
-            this.loadCategories();
+            if (!this.categoriesDisabled) {
+                this.loadCategories();
+            }
             Dep.prototype.loadList.call(this);
         },
 
@@ -73,7 +81,8 @@ Espo.define('views/modals/select-records-with-categories', ['views/modals/select
                         showRoot: true,
                         rootName: this.translate(this.scope, 'scopeNamesPlural'),
                         buttonsDisabled: true,
-                        checkboxes: false
+                        checkboxes: false,
+                        isExpanded: this.isExpanded
                     }, function (view) {
                         if (this.isRendered()) {
                             view.render();

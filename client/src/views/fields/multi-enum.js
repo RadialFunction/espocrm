@@ -32,7 +32,7 @@ Espo.define('views/fields/multi-enum', ['views/fields/array', 'lib!Selectize'], 
 
         type: 'multiEnum',
 
-        listTemplate: 'fields//array/detail',
+        listTemplate: 'fields//array/list',
 
         detailTemplate: 'fields/array/detail',
 
@@ -64,18 +64,26 @@ Espo.define('views/fields/multi-enum', ['views/fields/array', 'lib!Selectize'], 
 
         afterRender: function () {
             if (this.mode == 'edit') {
-                var $element = this.$element = this.$el.find('[name="' + this.name + '"]');
+                var $element = this.$element = this.$el.find('[data-name="' + this.name + '"]');
+
+                var data = [];
 
                 var valueList = Espo.Utils.clone(this.selected);
                 for (var i in valueList) {
+                    var value = valueList[i];
                     if (valueList[i] === '') {
                         valueList[i] = '__emptystring__';
+                    }
+                    if (!~(this.params.options || []).indexOf(value)) {
+                        data.push({
+                            value: value,
+                            label: value
+                        });
                     }
                 }
 
                 this.$element.val(valueList.join(':,:'));
 
-                var data = [];
                 (this.params.options || []).forEach(function (value) {
                     var label = this.getLanguage().translateOption(value, this.name, this.scope);
                     if (this.translatedOptions) {
@@ -95,7 +103,7 @@ Espo.define('views/fields/multi-enum', ['views/fields/array', 'lib!Selectize'], 
                     });
                 }, this);
 
-                this.$element.selectize({
+                var selectizeOptions = {
                     options: data,
                     delimiter: ':,:',
                     labelField: 'label',
@@ -113,7 +121,24 @@ Espo.define('views/fields/multi-enum', ['views/fields/array', 'lib!Selectize'], 
                             return 0;
                         };
                     }
-                });
+                };
+
+                if (!(this.params.options || []).length) {
+                    selectizeOptions.persist = false;
+                    selectizeOptions.create = function (input) {
+                        return {
+                            value: input,
+                            label: input
+                        }
+                    };
+                    selectizeOptions.render = {
+                        option_create: function (data, escape) {
+                            return '<div class="create"><strong>' + escape(data.input) + '</strong>&hellip;</div>';
+                        }
+                    };
+                }
+
+                this.$element.selectize(selectizeOptions);
 
                 this.$element.on('change', function () {
                     this.trigger('change');
@@ -144,7 +169,7 @@ Espo.define('views/fields/multi-enum', ['views/fields/array', 'lib!Selectize'], 
             if (this.isRequired()) {
                 var value = this.model.get(this.name);
                 if (!value || value.length == 0) {
-                    var msg = this.translate('fieldIsRequired', 'messages').replace('{field}', this.translate(this.name, 'fields', this.model.name));
+                    var msg = this.translate('fieldIsRequired', 'messages').replace('{field}', this.getLabelText());
                     this.showValidationMessage(msg, '.selectize-control');
                     return true;
                 }
@@ -153,5 +178,3 @@ Espo.define('views/fields/multi-enum', ['views/fields/array', 'lib!Selectize'], 
 
     });
 });
-
-

@@ -1,0 +1,1 @@
+{{#if value}}<span class="fas fa-paperclip small text-soft"></span>{{/if}}

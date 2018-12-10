@@ -45,11 +45,13 @@ class MassEmail extends \Espo\Services\Record
 
     private $emailTemplateService = null;
 
+    protected $mandatorySelectAttributeList = ['campaignId'];
+
     protected function init()
     {
         parent::init();
         $this->addDependency('container');
-        $this->addDependency('language');
+        $this->addDependency('defaultLanguage');
     }
 
     protected function getMailSender()
@@ -59,7 +61,7 @@ class MassEmail extends \Espo\Services\Record
 
     protected function getLanguage()
     {
-        return $this->getInjection('language');
+        return $this->getInjection('defaultLanguage');
     }
 
     protected function beforeCreateEntity(Entity $entity, $data)
@@ -222,6 +224,7 @@ class MassEmail extends \Espo\Services\Record
         foreach ($entityList as $target) {
             $emailAddress = $target->get('emailAddress');
             if (!$target->get('emailAddress')) continue;
+            if (strpos($emailAddress, 'ERASED:') === 0) continue;
             $emailAddressRecord = $this->getEntityManager()->getRepository('EmailAddress')->getByAddress($emailAddress);
             if ($emailAddressRecord) {
                 if ($emailAddressRecord->get('invalid') || $emailAddressRecord->get('optOut')) {
@@ -381,13 +384,15 @@ class MassEmail extends \Espo\Services\Record
             }
         }
 
+        $trackImageAlt = $this->getLanguage()->translate('Campaign', 'scopeNames');
+
         $trackOpenedUrl = $this->getConfig()->get('siteUrl') . '?entryPoint=campaignTrackOpened&id=' . $queueItem->id;
-        $trackOpenedHtml = '<img width="1" height="1" border="0" src="'.$trackOpenedUrl.'">';
+        $trackOpenedHtml = '<img alt="'.$trackImageAlt.'" width="1" height="1" border="0" src="'.$trackOpenedUrl.'">';
 
         if ($massEmail->get('campaignId')) {
             if ($emailData['isHtml']) {
                 if ($massEmail->get('campaignId')) {
-                    $body .= $trackOpenedHtml;
+                    $body .= '<br>' . $trackOpenedHtml;
                 }
             }
         }

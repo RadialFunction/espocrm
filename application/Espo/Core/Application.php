@@ -81,6 +81,11 @@ class Application
         return $this->container;
     }
 
+    protected function getConfig()
+    {
+        return $this->getContainer()->get('config');
+    }
+
     public function run($name = 'default')
     {
         $this->routeHooks();
@@ -91,6 +96,7 @@ class Application
     public function runClient()
     {
         $this->getContainer()->get('clientManager')->display();
+        exit;
     }
 
     public function runEntryPoint($entryPoint, $data = array(), $final = false)
@@ -127,17 +133,66 @@ class Application
 
             $slim->run();
         } catch (\Exception $e) {
-            $container->get('output')->processError($e->getMessage(), $e->getCode(), true);
+            $container->get('output')->processError($e->getMessage(), $e->getCode(), true, $e);
         }
     }
 
     public function runCron()
     {
+        if ($this->getConfig()->get('cronDisabled')) {
+            $GLOBALS['log']->warning("Cron is not run because it's disabled with 'cronDisabled' param.");
+            return;
+        }
+
         $auth = $this->createAuth();
         $auth->useNoAuth();
 
         $cronManager = new \Espo\Core\CronManager($this->container);
         $cronManager->run();
+    }
+
+    public function runDaemon()
+    {
+        $maxProcessNumber = $this->getConfig()->get('daemonMaxProcessNumber');
+        $interval = $this->getConfig()->get('daemonInterval');
+        $timeout = $this->getConfig()->get('daemonProcessTimeout');
+
+        if (!$maxProcessNumber || !$interval) {
+            $GLOBALS['log']->error("Daemon config params are not set.");
+            return;
+        }
+
+        $processList = [];
+        while (true) {
+            $toSkip = false;
+            $runningCount = 0;
+            foreach ($processList as $i => $process) {
+                if ($process->isRunning()) {
+                    $runningCount++;
+                } else if ($process->isRunning()) {
+                    unset($processList[$i]);
+                }
+            }
+            $processList = array_values($processList);
+            if (count($runningCount) >= $maxProcessNumber) {
+                $toSkip = true;
+            }
+            if (!$toSkip) {
+                $process = new \Symfony\Component\Process\Process(['php', 'cron.php']);
+                $process->setTimeout($timeout);
+                $process->run();
+            }
+            sleep($interval);
+        }
+    }
+
+    public function runJob($id)
+    {
+        $auth = $this->createAuth();
+        $auth->useNoAuth();
+
+        $cronManager = new \Espo\Core\CronManager($this->container);
+        $cronManager->runJobById($id);
     }
 
     public function runRebuild()
@@ -154,7 +209,7 @@ class Application
 
     public function isInstalled()
     {
-        $config = $this->getContainer()->get('config');
+        $config = $this->getConfig();
 
         if (file_exists($config->getConfigPath()) && $config->get('isInstalled')) {
             return true;
@@ -176,7 +231,7 @@ class Application
         try {
             $auth = $this->createAuth();
         } catch (\Exception $e) {
-            $container->get('output')->processError($e->getMessage(), $e->getCode());
+            $container->get('output')->processError($e->getMessage(), $e->getCode(), false, $e);
         }
 
         $apiAuth = $this->createApiAuth($auth);
@@ -223,10 +278,10 @@ class Application
 
             try {
                 $controllerManager = $this->getContainer()->get('controllerManager');
-                $result = $controllerManager->process($controllerName, $actionName, $params, $data, $slim->request());
+                $result = $controllerManager->process($controllerName, $actionName, $params, $data, $slim->request(), $slim->response());
                 $container->get('output')->render($result);
             } catch (\Exception $e) {
-                $container->get('output')->processError($e->getMessage(), $e->getCode());
+                $container->get('output')->processError($e->getMessage(), $e->getCode(), false, $e);
             }
         });
 
@@ -243,7 +298,7 @@ class Application
 
     protected function getRouteList()
     {
-        $routes = new \Espo\Core\Utils\Route($this->getContainer()->get('config'), $this->getMetadata(), $this->getContainer()->get('fileManager'));
+        $routes = new \Espo\Core\Utils\Route($this->getConfig(), $this->getMetadata(), $this->getContainer()->get('fileManager'));
 
 
         return $routes->getAll();
@@ -251,11 +306,11 @@ class Application
 
     protected function initRoutes()
     {
-        $crudList = array_keys($this->getContainer()->get('config')->get('crud'));
+        $crudList = array_keys($this->getConfig()->get('crud'));
 
         foreach ($this->getRouteList() as $route) {
             $method = strtolower($route['method']);
-            if (!in_array($method, $crudList)) {
+            if (!in_array($method, $crudList) && $method !== 'options') {
                 $GLOBALS['log']->error('Route: Method ['.$method.'] does not exist. Please check your route ['.$route['route'].']');
                 continue;
             }
@@ -272,7 +327,7 @@ class Application
 
     protected function initAutoloads()
     {
-        $autoload = new \Espo\Core\Utils\Autoload($this->getContainer()->get('config'), $this->getMetadata(), $this->getContainer()->get('fileManager'));
+        $autoload = new \Espo\Core\Utils\Autoload($this->getConfig(), $this->getMetadata(), $this->getContainer()->get('fileManager'));
 
         try {
             $autoloadList = $autoload->getAll();
@@ -327,9 +382,9 @@ class Application
     public function setupSystemUser()
     {
         $user = $this->getContainer()->get('entityManager')->getEntity('User', 'system');
-        $user->set('isAdmin', true);
+        $user->set('isAdmin', true); // TODO remove in 5.7
+        $user->set('type', 'system');
         $this->getContainer()->setUser($user);
         $this->getContainer()->get('entityManager')->setUser($user);
     }
 }
-

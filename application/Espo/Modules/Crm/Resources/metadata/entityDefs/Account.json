@@ -2,14 +2,17 @@
     "fields": {
         "name": {
             "type": "varchar",
+            "maxLength": 249,
             "required": true,
             "trim": true
         },
         "website": {
-            "type": "url"
+            "type": "url",
+            "strip": true
         },
         "emailAddress": {
-            "type": "email"
+            "type": "email",
+            "isPersonalData": true
         },
         "phoneNumber": {
             "type": "phone",
@@ -88,7 +91,8 @@
         "contactRole": {
             "type": "varchar",
             "notStorable": true,
-            "disabled": true
+            "disabled": true,
+            "maxLength": 100
         },
         "contactIsInactive": {
             "type": "bool",
@@ -204,6 +208,12 @@
             "layoutListDisabled": true,
             "readOnly": true,
             "view": "views/fields/link-one"
+        },
+        "targetListIsOptedOut": {
+            "type": "bool",
+            "notStorable": true,
+            "readOnly": true,
+            "disabled": true
         }
     },
     "links": {
@@ -324,11 +334,14 @@
         }
     },
     "collection": {
-        "sortBy": "name",
-        "asc": true,
+        "orderBy": "createdAt",
+        "order": "desc",
         "textFilterFields": ["name", "emailAddress"]
     },
     "indexes": {
+        "createdAt": {
+            "columns": ["createdAt", "deleted"]
+        },
         "name": {
             "columns": ["name", "deleted"]
         },

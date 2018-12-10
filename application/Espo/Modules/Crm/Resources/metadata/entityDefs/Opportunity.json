@@ -18,14 +18,16 @@
             "type": "float",
             "readOnly": true,
             "notStorable": true,
-            "select": "opportunity.amount * amount_currency_alias.rate * opportunity.probability / 100",
+            "select": "opportunity.amount * amountCurrencyRate.rate * opportunity.probability / 100",
             "where": {
-                "=": "(opportunity.amount * amount_currency_alias.rate * opportunity.probability / 100) = {value}",
-                "<": "(opportunity.amount * amount_currency_alias.rate * opportunity.probability / 100) < {value}",
-                ">": "(opportunity.amount * amount_currency_alias.rate * opportunity.probability / 100) > {value}",
-                "<=": "(opportunity.amount * amount_currency_alias.rate * opportunity.probability / 100) <= {value}",
-                ">=": "(opportunity.amount * amount_currency_alias.rate * opportunity.probability / 100) >= {value}",
-                "<>": "(opportunity.amount * amount_currency_alias.rate * opportunity.probability / 100) <> {value}"
+                "=": "(opportunity.amount * amountCurrencyRate.rate * opportunity.probability / 100) = {value}",
+                "<": "(opportunity.amount * amountCurrencyRate.rate * opportunity.probability / 100) < {value}",
+                ">": "(opportunity.amount * amountCurrencyRate.rate * opportunity.probability / 100) > {value}",
+                "<=": "(opportunity.amount * amountCurrencyRate.rate * opportunity.probability / 100) <= {value}",
+                ">=": "(opportunity.amount * amountCurrencyRate.rate * opportunity.probability / 100) >= {value}",
+                "<>": "(opportunity.amount * amountCurrencyRate.rate * opportunity.probability / 100) <> {value}",
+                "IS NULL": "opportunity.amount IS NULL",
+                "IS NOT NULL": "opportunity.amount IS NOT NULL"
             },
             "orderBy": "amountWeightedConverted {direction}",
             "view": "views/fields/currency-converted"
@@ -38,7 +40,9 @@
             "view": "crm:views/opportunity/fields/contacts",
             "columns": {
                 "role": "opportunityRole"
-            }
+            },
+            "additionalAttributeList": ["columns"],
+            "orderBy": "name"
         },
         "stage": {
             "type": "enum",
@@ -54,12 +58,22 @@
                 "Closed Won": 100,
                 "Closed Lost": 0
             },
+            "style": {
+                "Closed Won": "success",
+                "Closed Lost": "danger"
+            },
             "fieldManagerAdditionalParamList": [
                 {
                     "name": "probabilityMap",
                     "view": "crm:views/opportunity/admin/field-manager/fields/probability-map"
                 }
             ]
+        },
+        "lastStage": {
+            "type": "enum",
+            "view": "crm:views/opportunity/fields/last-stage",
+            "customizationOptionsDisabled": true,
+            "customizationDefaultDisabled": true
         },
         "probability": {
             "type": "int",
@@ -97,6 +111,11 @@
             "layoutMassUpdateDisabled": true,
             "layoutListDisabled": true,
             "layoutDetailDisabled": true,
+            "customizationDefaultDisabled": true,
+            "customizationRequiredDisabled": true,
+            "customizationIsSortedDisabled": true,
+            "customizationAuditedDisabled": true,
+            "customizationReadOnlyDisabled": true,
             "where": {
                 "=": {
                     "leftJoins": ["contacts"],
@@ -234,12 +253,15 @@
         }
     },
     "collection": {
-        "sortBy": "createdAt",
-        "asc": false
+        "orderBy": "createdAt",
+        "order": "desc"
     },
     "indexes": {
         "stage": {
             "columns": ["stage", "deleted"]
+        },
+        "lastStage": {
+            "columns": ["lastStage"]
         },
         "assignedUser": {
             "columns": ["assignedUserId", "deleted"]

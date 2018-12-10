@@ -5,6 +5,7 @@
         "Team": "Team",
         "Role": "Role",
         "EmailTemplate": "Email Template",
+        "EmailTemplateCategory": "Email Template Categories",
         "EmailAccount": "Personal Email Account",
         "EmailAccountScope": "Personal Email Account",
         "OutboundEmail": "Outbound Email",
@@ -23,6 +24,7 @@
         "Attachment": "Attachment",
         "EmailFolder": "Email Folder",
         "PortalUser": "Portal User",
+        "ApiUser": "API User",
         "ScheduledJobLogRecord": "Scheduled Job Log Record",
         "PasswordChangeRequest": "Password Change Request",
         "ActionHistoryRecord": "Action History Record",
@@ -41,7 +43,12 @@
         "Global": "Global",
         "Preferences": "Preferences",
         "EmailAddress": "Email Address",
-        "PhoneNumber": "Phone Number"
+        "PhoneNumber": "Phone Number",
+        "AuthLogRecord": "Auth Log Record",
+        "AuthFailLogRecord": "Auth Fail Log Record",
+        "LeadCapture": "Lead Capture Entry Point",
+        "LeadCaptureLogRecord": "Lead Capture Log Record",
+        "ArrayValue": "Array Value"
     },
     "scopeNamesPlural": {
         "Email": "Emails",
@@ -49,6 +56,7 @@
         "Team": "Teams",
         "Role": "Roles",
         "EmailTemplate": "Email Templates",
+        "EmailTemplateCategory": "Email Template Categories",
         "EmailAccount": "Personal Email Accounts",
         "EmailAccountScope": "Personal Email Accounts",
         "OutboundEmail": "Outbound Emails",
@@ -58,7 +66,7 @@
         "Dashboard": "Dashboard",
         "InboundEmail": "Group Email Accounts",
         "Stream": "Stream",
-        "Import": "Import Results",
+        "Import": "Import",
         "Template": "Templates",
         "Job": "Jobs",
         "EmailFilter": "Email Filters",
@@ -67,12 +75,18 @@
         "Attachment": "Attachments",
         "EmailFolder": "Email Folders",
         "PortalUser": "Portal Users",
+        "ApiUser": "API Users",
         "ScheduledJobLogRecord": "Scheduled Job Log Records",
         "PasswordChangeRequest": "Password Change Requests",
         "ActionHistoryRecord": "Action History",
         "AuthToken": "Auth Tokens",
         "UniqueId": "Unique IDs",
-        "LastViewed": "Last Viewed"
+        "LastViewed": "Last Viewed",
+        "AuthLogRecord": "Auth Log",
+        "AuthFailLogRecord": "Auth Fail Log",
+        "LeadCapture": "Lead Capture",
+        "LeadCaptureLogRecord": "Lead Capture Log",
+        "ArrayValue": "Array Values"
     },
     "labels": {
         "Misc": "Misc",
@@ -222,7 +236,12 @@
         "Collapse": "Collapse",
         "New notifications": "New notifications",
         "Manage Categories": "Manage Categories",
-        "Manage Folders": "Manage Folders"
+        "Manage Folders": "Manage Folders",
+        "Convert to": "Convert to",
+        "View Personal Data": "View Personal Data",
+        "Personal Data": "Personal Data",
+        "Erase": "Erase",
+        "Move Over": "Move Over"
     },
     "messages": {
         "pleaseWait": "Please wait...",
@@ -278,7 +297,9 @@
         "massFollowResultSingle": "{count} record now is followed",
         "massUnfollowResultSingle": "{count} record now is not followed",
         "massFollowZeroResult": "Nothing got followed",
-        "massUnfollowZeroResult": "Nothing got unfollowed"
+        "massUnfollowZeroResult": "Nothing got unfollowed",
+        "erasePersonalDataConfirmation": "Checked fields will be erased permanently. Are you sure?",
+        "massPrintPdfMaxCountError": "Can't print more that {maxCount} records."
     },
     "boolFilters": {
         "onlyMy": "Only My",
@@ -294,7 +315,9 @@
         "massUpdate": "Mass Update",
         "export": "Export",
         "follow": "Follow",
-        "unfollow": "Unfollow"
+        "unfollow": "Unfollow",
+        "convertCurrency": "Convert Currency",
+        "printPdf": "Print to PDF"
     },
     "fields": {
         "name": "Name",
@@ -304,6 +327,8 @@
         "assignedUser": "Assigned User",
         "assignedUsers": "Assigned Users",
         "emailAddress": "Email",
+        "emailAddressData": "Email Address Data",
+        "emailAddressIsOptedOut": "Email Address is Opted-Out",
         "assignedUserName": "Assigned User Name",
         "teams": "Teams",
         "createdAt": "Created At",
@@ -318,10 +343,15 @@
         "phoneNumberFax": "Phone (Fax)",
         "phoneNumberOffice": "Phone (Office)",
         "phoneNumberOther": "Phone (Other)",
+        "phoneNumberData": "Phone Number Data",
         "order": "Order",
         "parent": "Parent",
         "children": "Children",
-        "id": "ID"
+        "id": "ID",
+        "ids": "IDs",
+        "type": "Type",
+        "names": "Names",
+        "targetListIsOptedOut": "Is Opted Out (Target List)"
     },
     "links": {
         "assignedUser": "Assigned User",
@@ -546,7 +576,11 @@
             "ever": "Ever",
             "isEmpty": "Is Empty",
             "olderThanXDays": "Older Than X Days",
-            "afterXDays": "After X Days"
+            "afterXDays": "After X Days",
+            "currentFiscalYear": "Current Fiscal Year",
+            "lastFiscalYear": "Last Fiscal Year",
+            "currentFiscalQuarter": "Current Fiscal Quarter",
+            "lastFiscalQuarter": "Last Fiscal Quarter"
         },
         "searchRanges": {
             "is": "Is",
@@ -701,15 +735,19 @@
             }
         }
     },
+    "listViewModes": {
+        "list": "List",
+        "kanban": "Kanban"
+    },
     "themes": {
-        "Espo": "Espo",
+        "Espo": "Classic Espo",
         "EspoRtl": "RTL Espo",
-        "Sakura": "Sakura",
-        "EspoVertical": "Espo w/ sidebar",
-        "SakuraVertical": "Sakura w/ sidebar",
-        "Violet": "Violet",
-        "VioletVertical": "Violet w/ sidebar",
-        "Hazyblue": "Hazyblue",
-        "HazyblueVertical": "Hazyblue w/ sidebar"
+        "Sakura": "Classic Sakura",
+        "EspoVertical": "Vertical Espo",
+        "SakuraVertical": "Vertical Sakura",
+        "Violet": "Classic Violet",
+        "VioletVertical": "Vertical Violet",
+        "Hazyblue": "Classic Hazyblue",
+        "HazyblueVertical": "Vertical Hazyblue"
     }
 }

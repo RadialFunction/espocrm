@@ -47,8 +47,8 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
                 var notValid = false;
                 data.forEach(function (row, i) {
                     var emailAddress = row.emailAddress;
-                    if (!re.test(emailAddress)) {
-                        var msg = this.translate('fieldShouldBeEmail', 'messages').replace('{field}', this.translate(this.name, 'fields', this.model.name));
+                    if (!re.test(emailAddress) && emailAddress.indexOf(this.erasedPlaceholder) !== 0) {
+                        var msg = this.translate('fieldShouldBeEmail', 'messages').replace('{field}', this.getLabelText());
                         this.showValidationMessage(msg, 'div.email-address-block:nth-child(' + (i + 1).toString() + ') input');
                         notValid = true;
                     }
@@ -62,7 +62,7 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
         validateRequired: function () {
             if (this.isRequired()) {
                 if (!this.model.get(this.name) || !this.model.get(this.name) === '') {
-                    var msg = this.translate('fieldIsRequired', 'messages').replace('{field}', this.translate(this.name, 'fields', this.model.name));
+                    var msg = this.translate('fieldIsRequired', 'messages').replace('{field}', this.getLabelText());
                     this.showValidationMessage(msg, 'div.email-address-block:nth-child(1) input');
                     return true;
                 }
@@ -76,10 +76,16 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
 
                 if (this.model.isNew() || !this.model.get(this.name)) {
                     if (!emailAddressData || !emailAddressData.length) {
-                         emailAddressData = [{
+                        var optOut = false;
+                        if (this.model.isNew()) {
+                            optOut = this.emailAddressOptedOutByDefault && this.model.name !== 'User';
+                        } else {
+                            optOut = this.model.get(this.isOptedOutFieldName)
+                        }
+                        emailAddressData = [{
                             emailAddress: this.model.get(this.name) || '',
                             primary: true,
-                            optOut: false,
+                            optOut: optOut,
                             invalid: false
                         }];
                     }
@@ -90,7 +96,7 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
             }
 
             if ((!emailAddressData || emailAddressData.length === 0) && this.model.get(this.name)) {
-                 emailAddressData = [{
+                emailAddressData = [{
                     emailAddress: this.model.get(this.name),
                     primary: true,
                     optOut: false,
@@ -98,9 +104,26 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
                 }];
             }
 
-            return _.extend({
+            if (emailAddressData) {
+                emailAddressData = Espo.Utils.cloneDeep(emailAddressData);
+                emailAddressData.forEach(function (item) {
+                    item.erased = item.emailAddress.indexOf(this.erasedPlaceholder) === 0
+                }, this);
+            }
+
+            var data = _.extend({
                 emailAddressData: emailAddressData
             }, Dep.prototype.data.call(this));
+
+            if (this.mode === 'list' || this.mode === 'detail') {
+                data.isOptedOut = this.model.get(this.isOptedOutFieldName);
+                if (this.model.get(this.name)) {
+                    data.isErased = this.model.get(this.name).indexOf(this.erasedPlaceholder) === 0
+                }
+                data.valueIsSet = this.model.has(this.name);
+            }
+
+            return data;
         },
 
         events: {
@@ -132,7 +155,7 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
 
             'click [data-action="removeEmailAddress"]': function (e) {
                 var $block = $(e.currentTarget).closest('div.email-address-block');
-                if ($block.parent().children().size() == 1) {
+                if ($block.parent().children().length == 1) {
                     $block.find('input.email-address').val('');
                 } else {
                     this.removeEmailAddressBlock($block);
@@ -145,7 +168,7 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
                 var $block = $input.closest('div.email-address-block');
 
                 if ($input.val() == '') {
-                    if ($block.parent().children().size() == 1) {
+                    if ($block.parent().children().length == 1) {
                         $block.find('input.email-address').val('');
                     } else {
                         this.removeEmailAddressBlock($block);
@@ -171,7 +194,7 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
                 o = {
                     emailAddress: '',
                     primary: data.length ? false : true,
-                    optOut: false,
+                    optOut: this.emailAddressOptedOutByDefault,
                     invalid: false,
                     lower: ''
                 };
@@ -250,17 +273,17 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
                 }
             });
 
-            if (c == $input.size()) {
-                this.$el.find('[data-action="addEmailAddress"]').removeClass('disabled');
+            if (c == $input.length) {
+                this.$el.find('[data-action="addEmailAddress"]').removeClass('disabled').removeAttr('disabled');
             } else {
-                this.$el.find('[data-action="addEmailAddress"]').addClass('disabled');
+                this.$el.find('[data-action="addEmailAddress"]').addClass('disabled').attr('disabled', 'disabled');
             }
         },
 
         manageButtonsVisibility: function () {
             var $primary = this.$el.find('button[data-property-type="primary"]');
             var $remove = this.$el.find('button[data-action="removeEmailAddress"]');
-            if ($primary.size() > 1) {
+            if ($primary.length > 1) {
                 $primary.removeClass('hidden');
                 $remove.removeClass('hidden');
             } else {
@@ -276,6 +299,7 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
             };
 
             var scope = this.model.name;
+
             switch (scope) {
                 case 'Account':
                 case 'Lead':
@@ -298,6 +322,13 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
                     break;
             }
 
+            if (this.model.collection && this.model.collection.parentModel) {
+                if (this.checkParentTypeAvailability(this.model.collection.parentModel.entityType)) {
+                    attributes.parentType = this.model.collection.parentModel.entityType;
+                    attributes.parentId = this.model.collection.parentModel.id;
+                    attributes.parentName = this.model.collection.parentModel.get('name');
+                }
+            }
 
             if (!attributes.parentId) {
                 if (this.checkParentTypeAvailability(this.model.name)) {
@@ -319,6 +350,20 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
                 attributes.nameHash[emailAddress] = this.model.get('name');
             }
 
+            if (
+                this.getConfig().get('emailForceUseExternalClient') ||
+                this.getPreferences().get('emailUseExternalClient') ||
+                !this.getAcl().checkScope('Email', 'create')
+            ) {
+                require('email-helper', function (EmailHelper) {
+                    var emailHelper = new EmailHelper();
+                    var link = emailHelper.composeMailToLink(attributes, this.getConfig().get('outboundEmailBccAddress'));
+                    document.location.href = link;
+                }.bind(this));
+
+                return;
+            }
+
             this.notify('Loading...');
             this.createView('quickCreate', 'views/modals/compose-email', {
                 attributes: attributes,
@@ -334,6 +379,11 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
 
         setup: function () {
             this.dataFieldName = this.name + 'Data';
+            this.isOptedOutFieldName = this.name + 'IsOptedOut';
+
+            this.erasedPlaceholder = 'ERASED:';
+
+            this.emailAddressOptedOutByDefault = this.getConfig().get('emailAddressIsOptedOutByDefault');
         },
 
         fetchEmailAddressData: function () {
@@ -341,7 +391,7 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
 
             var $list = this.$el.find('div.email-address-block');
 
-            if ($list.size()) {
+            if ($list.length) {
                 $list.each(function (i, d) {
                     var row = {};
                     var $d = $(d);
@@ -367,14 +417,18 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
             var adderssData = this.fetchEmailAddressData() || [];
             data[this.dataFieldName] = adderssData;
             data[this.name] = null;
+            data[this.isOptedOutFieldName] = false;
 
             var primaryIndex = 0;
             adderssData.forEach(function (item, i) {
                 if (item.primary) {
                     primaryIndex = i;
+                    if (item.optOut) {
+                        data[this.isOptedOutFieldName] = true;
+                    }
                     return;
                 }
-            });
+            }, this);
 
             if (adderssData.length && primaryIndex > 0) {
                 var t = adderssData[0];
@@ -384,6 +438,8 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
 
             if (adderssData.length) {
                 data[this.name] = adderssData[0].emailAddress;
+            } else {
+                data[this.isOptedOutFieldName] = null;
             }
 
             return data;
@@ -391,4 +447,3 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
 
     });
 });
-

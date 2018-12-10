@@ -178,19 +178,32 @@ class Stream extends \Espo\Core\Hooks\Base
         return $userIdList;
     }
 
-    public function afterSave(Entity $entity, array $options = array())
+    public function afterSave(Entity $entity, array $options = [])
     {
         $entityType = $entity->getEntityType();
 
         if ($this->checkHasStream($entity)) {
+
+            $hasAssignedUsersField = false;
+            if ($entity->hasLinkMultipleField('assignedUsers')) {
+                $hasAssignedUsersField = true;
+            }
+
             if ($entity->isNew()) {
                 $userIdList = [];
 
                 $assignedUserId = $entity->get('assignedUserId');
                 $createdById = $entity->get('createdById');
 
+                $assignedUserIdList = [];
+                if ($hasAssignedUsersField) {
+                    $assignedUserIdList = $entity->getLinkMultipleIdList('assignedUsers');
+                }
+
                 if (
                     !$this->getUser()->isSystem()
+                    &&
+                    !$this->getUser()->isApi()
                     &&
                     $createdById
                     &&
@@ -210,6 +223,15 @@ class Stream extends \Espo\Core\Hooks\Base
                 ) {
                     $userIdList[] = $createdById;
                 }
+
+                if ($hasAssignedUsersField) {
+                    foreach ($assignedUserIdList as $userId) {
+                        if (!empty($userId) && !in_array($userId, $userIdList)) {
+                            $userIdList[] = $userId;
+                        }
+                    }
+                }
+
                 if (!empty($assignedUserId) && !in_array($assignedUserId, $userIdList)) {
                     $userIdList[] = $assignedUserId;
                 }
@@ -236,20 +258,21 @@ class Stream extends \Espo\Core\Hooks\Base
 
                 if (!empty($autofollowUserIdList)) {
                     $job = $this->getEntityManager()->getEntity('Job');
-                    $job->set(array(
+                    $job->set([
                         'serviceName' => 'Stream',
                         'methodName' => 'afterRecordCreatedJob',
-                        'data' => array(
+                        'data' => [
                             'userIdList' => $autofollowUserIdList,
                             'entityType' => $entity->getEntityType(),
                             'entityId' => $entity->id
-                        )
-                    ));
+                        ],
+                        'queue' => 'q1'
+                    ]);
                     $this->getEntityManager()->saveEntity($job);
                 }
             } else {
                 if (empty($options['noStream']) && empty($options['silent'])) {
-                    if ($entity->isFieldChanged('assignedUserId')) {
+                    if ($entity->isAttributeChanged('assignedUserId')) {
                         $assignedUserId = $entity->get('assignedUserId');
                         if (!empty($assignedUserId)) {
                             $this->getStreamService()->followEntity($entity, $assignedUserId);
@@ -273,6 +296,27 @@ class Stream extends \Espo\Core\Hooks\Base
                             $this->getStreamService()->noteStatus($entity, $field);
                         }
                     }
+
+                    $assignedUserIdList = [];
+                    if ($hasAssignedUsersField) {
+                        $assignedUserIdList = $entity->getLinkMultipleIdList('assignedUsers');
+                    }
+
+                    if ($hasAssignedUsersField) {
+                        $fetchedAssignedUserIdList = $entity->getFetched('assignedUsersIds');
+                        if (!is_array($fetchedAssignedUserIdList)) {
+                            $fetchedAssignedUserIdList = [];
+                        }
+                        foreach ($assignedUserIdList as $userId) {
+                            if (in_array($userId, $fetchedAssignedUserIdList)) {
+                                continue;
+                            }
+                            $this->getStreamService()->followEntity($entity, $userId);
+                            if ($this->getUser()->id === $userId) {
+                                $entity->set('isFollowed', true);
+                            }
+                        }
+                    }
                 }
 
                 $methodName = 'isChangedWithAclAffect';
@@ -294,14 +338,15 @@ class Stream extends \Espo\Core\Hooks\Base
                     )
                 ) {
                     $job = $this->getEntityManager()->getEntity('Job');
-                    $job->set(array(
+                    $job->set([
                         'serviceName' => 'Stream',
                         'methodName' => 'controlFollowersJob',
-                        'data' => array(
+                        'data' => [
                             'entityType' => $entity->getEntityType(),
                             'entityId' => $entity->id
-                        )
-                    ));
+                        ],
+                        'queue' => 'q1'
+                    ]);
                     $this->getEntityManager()->saveEntity($job);
                 }
             }

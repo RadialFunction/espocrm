@@ -14,6 +14,10 @@
          "type":"int"
       },
       {
+         "name": "strip",
+         "type": "bool"
+      },
+      {
          "name":"audited",
          "type":"bool"
       },
@@ -25,5 +29,6 @@
    "filter": true,
    "fieldDefs":{
       "type":"varchar"
-   }
+   },
+   "personalData": true
 }

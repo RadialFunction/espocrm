@@ -34,7 +34,7 @@ use Espo\Core\Utils\Config;
 use Espo\Core\ORM\EntityManager;
 use Espo\Core\Utils\Auth;
 
-class LDAP extends Base
+class LDAP extends Espo
 {
     private $utils;
 
@@ -62,6 +62,16 @@ class LDAP extends Base
     protected $userFieldMap = array(
         'teamsIds' => 'userTeamsIds',
         'defaultTeamId' => 'userDefaultTeamId',
+    );
+
+    /**
+     * User field name => option name
+     *
+     * @var array
+     */
+    protected $portalUserFieldMap = array(
+        'portalsIds' => 'portalUserPortalsIds',
+        'portalRolesIds' => 'portalUserRolesIds',
     );
 
     public function __construct(Config $config, EntityManager $entityManager, Auth $auth)
@@ -100,15 +110,26 @@ class LDAP extends Base
      *
      * @return \Espo\Entities\User | null
      */
-    public function login($username, $password, \Espo\Entities\AuthToken $authToken = null)
+    public function login($username, $password, \Espo\Entities\AuthToken $authToken = null, $params = [], $request)
     {
+        if (!$password) return;
+
+        $isPortal = !empty($params['isPortal']);
+
         if ($authToken) {
             return $this->loginByToken($username, $authToken);
         }
 
+        if ($isPortal) {
+            $useLdapAuthForPortalUser = $this->getUtils()->getOption('portalUserLdapAuth');
+            if (!$useLdapAuthForPortalUser) {
+                return parent::login($username, $password, $authToken, $isPortal);
+            }
+        }
+
         $ldapClient = $this->getLdapClient();
 
-        //login LDAP system user (ldapUsername, ldapPassword)
+        /* Login LDAP system user (ldapUsername, ldapPassword) */
         try {
             $ldapClient->bind();
         } catch (\Exception $e) {
@@ -119,16 +140,29 @@ class LDAP extends Base
             if (!isset($adminUser)) {
                 return null;
             }
+
             $GLOBALS['log']->info('LDAP: Administrator ['.$username.'] was logged in by Espo method.');
         }
 
         if (!isset($adminUser)) {
-            $userDn = $this->findLdapUserDnByUsername($username);
-            $GLOBALS['log']->debug('Found DN for ['.$username.']: ['.$userDn.'].');
+            try {
+                $userDn = $this->findLdapUserDnByUsername($username);
+            } catch (\Exception $e) {
+                $GLOBALS['log']->error('Error while finding DN for ['.$username.'], details: ' . $e->getMessage() . '.');
+            }
+
             if (!isset($userDn)) {
                 $GLOBALS['log']->error('LDAP: Authentication failed for user ['.$username.'], details: user is not found.');
-                return;
+
+                $adminUser = $this->adminLogin($username, $password);
+                if (!isset($adminUser)) {
+                    return null;
+                }
+
+                $GLOBALS['log']->info('LDAP: Administrator ['.$username.'] was logged in by Espo method.');
             }
+
+            $GLOBALS['log']->debug('User ['.$username.'] is found with this DN ['.$userDn.'].');
 
             try {
                 $ldapClient->bind($userDn, $password);
@@ -138,16 +172,16 @@ class LDAP extends Base
             }
         }
 
-        $user = $this->getEntityManager()->getRepository('User')->findOne(array(
-            'whereClause' => array(
+        $user = $this->getEntityManager()->getRepository('User')->findOne([
+            'whereClause' => [
                 'userName' => $username,
-            ),
-        ));
+                'type!=' => ['api', 'system']
+            ]
+        ]);
 
-        $isCreateUser = $this->getUtils()->getOption('createEspoUser');
-        if (!isset($user) && $isCreateUser) {
+        if (!isset($user) && $this->getUtils()->getOption('createEspoUser')) {
             $userData = $ldapClient->getEntry($userDn);
-            $user = $this->createUser($userData);
+            $user = $this->createUser($userData, $isPortal);
         }
 
         return $user;
@@ -171,7 +205,7 @@ class LDAP extends Base
         $user = $this->getEntityManager()->getEntity('User', $userId);
 
         $tokenUsername = $user->get('userName');
-        if ($username != $tokenUsername) {
+        if (strtolower($username) != strtolower($tokenUsername)) {
             $GLOBALS['log']->alert('Unauthorized access attempt for user ['.$username.'] from IP ['.$_SERVER['REMOTE_ADDR'].']');
             return null;
         }
@@ -179,7 +213,7 @@ class LDAP extends Base
         $user = $this->getEntityManager()->getRepository('User')->findOne(array(
             'whereClause' => array(
                 'userName' => $username,
-            ),
+            )
         ));
 
         return $user;
@@ -196,13 +230,13 @@ class LDAP extends Base
     {
         $hash = $this->getPasswordHash()->hash($password);
 
-        $user = $this->getEntityManager()->getRepository('User')->findOne(array(
-            'whereClause' => array(
+        $user = $this->getEntityManager()->getRepository('User')->findOne([
+            'whereClause' => [
                 'userName' => $username,
                 'password' => $hash,
-                'isAdmin' => 1
-            ),
-        ));
+                'type' => ['admin', 'super-admin']
+            ]
+        ]);
 
         return $user;
     }
@@ -211,10 +245,11 @@ class LDAP extends Base
      * Create Espo user with data gets from LDAP server
      *
      * @param  array $userData LDAP entity data
+     * @param  boolean $isPortal Is portal user
      *
      * @return \Espo\Entities\User
      */
-    protected function createUser(array $userData)
+    protected function createUser(array $userData, $isPortal = false)
     {
         $GLOBALS['log']->info('Creating new user ...');
         $data = array();
@@ -233,10 +268,18 @@ class LDAP extends Base
         }
 
         //set user fields
-        $userFields = $this->loadFields('user');
+        if ($isPortal) {
+            $userFields = $this->loadFields('portalUser');
+            $userFields['type'] = 'portal';
+        } else {
+            $userFields = $this->loadFields('user');
+        }
+
         foreach ($userFields as $fieldName => $fieldValue) {
             $data[$fieldName] = $fieldValue;
         }
+
+        $this->getAuth()->useNoAuth();
 
         $user = $this->getEntityManager()->getEntity('User');
         $user->set($data);

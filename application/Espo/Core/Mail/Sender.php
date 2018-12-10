@@ -89,8 +89,12 @@ class Sender
 
         $this->transport = new SmtpTransport();
 
+        $config = $this->config;
+
+        $localHostName = $config->get('smtpLocalHostName', gethostname());
+
         $opts = array(
-            'name' => 'admin',
+            'name' => $localHostName,
             'host' => $params['server'],
             'port' => $params['port'],
             'connection_config' => array()
@@ -132,8 +136,10 @@ class Sender
 
         $config = $this->config;
 
+        $localHostName = $config->get('smtpLocalHostName', gethostname());
+
         $opts = array(
-            'name' => 'admin',
+            'name' => $localHostName,
             'host' => $config->get('smtpServer'),
             'port' => $config->get('smtpPort'),
             'connection_config' => array()
@@ -170,7 +176,10 @@ class Sender
             } else {
                 $fromName = $config->get('outboundEmailFromName');
             }
+
             $message->addFrom(trim($email->get('from')), $fromName);
+
+            $fromAddress = trim($email->get('from'));
         } else {
             if (!empty($params['fromAddress'])) {
                 $fromAddress = $params['fromAddress'];
@@ -188,11 +197,15 @@ class Sender
             }
 
             $message->addFrom($fromAddress, $fromName);
-        }
 
-        if (!$email->get('from')) {
             $email->set('from', $fromAddress);
         }
+
+        $fromString = '<' . $fromAddress . '>';
+        if ($fromName) {
+            $fromString = $fromName . ' ' . $fromString;
+        }
+        $email->set('fromString', $fromString);
 
         $sender = new \Zend\Mail\Header\Sender();
         $sender->setAddress($email->get('from'));
@@ -260,7 +273,7 @@ class Sender
                 $attachment = new MimePart(file_get_contents($fileName));
                 $attachment->disposition = Mime::DISPOSITION_ATTACHMENT;
                 $attachment->encoding = Mime::ENCODING_BASE64;
-                $attachment->filename = $a->get('name');
+                $attachment->filename ='=?utf-8?B?' . base64_encode($a->get('name')) . '?=';
                 if ($a->get('type')) {
                     $attachment->type = $a->get('type');
                 }

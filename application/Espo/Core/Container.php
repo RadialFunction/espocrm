@@ -32,7 +32,7 @@ namespace Espo\Core;
 class Container
 {
 
-    private $data = array();
+    private $data = [];
 
 
     /**
@@ -178,7 +178,7 @@ class Container
 
     protected function loadMailSender()
     {
-        $className = $this->getServiceClassName('mailSernder', '\\Espo\\Core\\Mail\\Sender');
+        $className = $this->getServiceClassName('mailSender', '\\Espo\\Core\\Mail\\Sender');
         return new $className(
             $this->get('config'),
             $this->get('entityManager')
@@ -222,6 +222,13 @@ class Container
         );
     }
 
+    protected function loadNotificatorFactory()
+    {
+        return new \Espo\Core\NotificatorFactory(
+            $this
+        );
+    }
+
     protected function loadMetadata()
     {
         return new \Espo\Core\Utils\Metadata(
@@ -240,6 +247,14 @@ class Container
     }
 
     protected function loadAclManager()
+    {
+        $className = $this->getServiceClassName('acl', '\\Espo\\Core\\AclManager');
+        return new $className(
+            $this->get('container')
+        );
+    }
+
+    protected function loadInternalAclManager()
     {
         $className = $this->getServiceClassName('acl', '\\Espo\\Core\\AclManager');
         return new $className(
@@ -273,7 +288,7 @@ class Container
         return new \Espo\Core\Utils\Metadata\OrmMetadata(
             $this->get('metadata'),
             $this->get('fileManager'),
-            $this->get('config')->get('useCache')
+            $this->get('config')
         );
     }
 
@@ -293,6 +308,16 @@ class Container
             $this->get('fileManager'),
             $this->get('metadata'),
             $this->get('config')->get('useCache')
+        );
+    }
+
+    protected function loadBaseLanguage()
+    {
+        return new \Espo\Core\Utils\Language(
+            'en_US',
+            $this->get('fileManager'),
+            $this->get('metadata'),
+            $this->get('useCache')
         );
     }
 
@@ -330,8 +355,6 @@ class Container
     protected function loadFieldManager()
     {
         return new \Espo\Core\Utils\FieldManager(
-            $this->get('metadata'),
-            $this->get('language'),
             $this
         );
     }

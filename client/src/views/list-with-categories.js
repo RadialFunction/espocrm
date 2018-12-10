@@ -44,7 +44,7 @@ Espo.define('views/list-with-categories', 'views/list', function (Dep) {
 
         categoryScope: null,
 
-        categoryField: 'cagegory',
+        categoryField: 'category',
 
         categoryFilterType: 'inCategory',
 
@@ -81,7 +81,7 @@ Espo.define('views/list-with-categories', 'views/list', function (Dep) {
                 this.hasExpandedToggler = false;
             } else {
                 if (!this.expandedTogglerDisabled) {
-                    if (!this.getUser().get('isPortalUser')) {
+                    if (!this.getUser().isPortal()) {
                         if (this.hasIsExpandedStoredValue()) {
                             this.isExpanded = this.getIsExpandedStoredValue();
                         }

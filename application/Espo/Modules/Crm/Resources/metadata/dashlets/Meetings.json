@@ -22,9 +22,10 @@
             }
         },
         "defaults": {
-            "sortBy": "dateStart",
-            "asc": true,
+            "orderBy": "dateStart",
+            "order": "desc",
             "displayRecords": 5,
+            "populateAssignedUser": true,
             "expandedLayout": {
                 "rows": [
                     [

@@ -27,44 +27,9 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-return array(
-
+return [
     'apiPath' => '/api/v1',
-
-    'requirements' => array(
-        'phpVersion' => '5.6',
-
-        'phpRequires' => array(
-            'JSON',
-            'openssl',
-            'pdo_mysql'
-        ),
-
-        'phpRecommendations' => array(
-            'zip',
-            'gd',
-            'mbstring',
-            'imap',
-            'curl',
-            'xml',
-            'max_execution_time' => 180,
-            'max_input_time' => 180,
-            'memory_limit' => '256M',
-            'post_max_size' => '20M',
-            'upload_max_filesize' => '20M',
-        ),
-
-        'mysqlVersion' => '5.5.3',
-        'mysqlRequires' => array(
-
-        ),
-
-        'mysqlRecommendations' => array(
-
-        ),
-    ),
-
-    'rewriteRules' => array(
+    'rewriteRules' => [
         'APACHE1' => 'a2enmod rewrite
 service apache2 restart',
         'APACHE2' => '&#60;Directory /PATH_TO_ESPO/&#62;
@@ -132,10 +97,9 @@ service apache2 restart',
         deny all;
     }
 }',
-    ),
+    ],
 
     'blog' => 'http://blog.espocrm.com',
     'twitter' => 'https://twitter.com/espocrm',
     'forum' => 'http://forum.espocrm.com',
-
-);
+];

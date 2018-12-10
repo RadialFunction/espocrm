@@ -41,6 +41,8 @@ class AclManager extends \Espo\Core\AclManager
 
     private $portal = null;
 
+    protected $userAclClassName = '\\Espo\\Core\\Portal\\Acl';
+
     public function getImplementation($scope)
     {
         if (empty($this->implementationHashMap[$scope])) {
@@ -262,8 +264,7 @@ class AclManager extends \Espo\Core\AclManager
 
     protected function checkUserIsNotPortal($user)
     {
-        return !$user->get('isPortalUser');
+        return !$user->isPortal();
     }
 
 }
-

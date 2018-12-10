@@ -62,6 +62,11 @@ class App extends \Espo\Core\Services\Base
         return $this->getInjection('entityManager');
     }
 
+    protected function getMetadata()
+    {
+        return $this->getInjection('metadata');
+    }
+
     public function getUserData()
     {
         $preferencesData = $this->getPreferences()->getValueMap();
@@ -71,7 +76,7 @@ class App extends \Espo\Core\Services\Base
         if (!$user->has('teamsIds')) {
             $user->loadLinkMultipleField('teams');
         }
-        if ($user->get('isPortalUser')) {
+        if ($user->isPortal()) {
             $user->loadAccountField();
             $user->loadLinkMultipleField('accounts');
         }
@@ -114,7 +119,8 @@ class App extends \Espo\Core\Services\Base
             'language' => $language,
             'appParams' => [
                 'maxUploadSize' => $this->getMaxUploadSize() / 1024.0 / 1024.0,
-                'templateEntityTypeList' => $this->getTemplateEntityTypeList()
+                'templateEntityTypeList' => $this->getTemplateEntityTypeList(),
+                'isRestrictedMode' => $this->getConfig()->get('restrictedMode')
             ]
         ];
     }
@@ -125,11 +131,11 @@ class App extends \Espo\Core\Services\Base
         $emailAddressList = [];
         foreach ($user->get('emailAddresses') as $emailAddress) {
             if ($emailAddress->get('invalid')) continue;
-            if ($user->get('emailAddrses') === $emailAddress->get('name')) continue;
+            if ($user->get('emailAddress') === $emailAddress->get('name')) continue;
             $emailAddressList[] = $emailAddress->get('name');
         }
-        if ($user->get('emailAddrses')) {
-            array_unshift($emailAddressList, $user->get('emailAddrses'));
+        if ($user->get('emailAddress')) {
+            array_unshift($emailAddressList, $user->get('emailAddress'));
         }
 
         $entityManager = $this->getEntityManager();
@@ -247,4 +253,134 @@ class App extends \Espo\Core\Services\Base
         $this->getInjection('container')->get('dataManager')->rebuild();
     }
 
+    // TODO remove in 5.5.0
+    public function jobPopulatePhoneNumberNumeric()
+    {
+        $numberList = $this->getEntityManager()->getRepository('PhoneNumber')->find();
+        foreach ($numberList as $number) {
+            $this->getEntityManager()->saveEntity($number);
+        }
+    }
+
+    // TODO remove in 5.5.0
+    public function jobPopulateArrayValues()
+    {
+        $scopeList = array_keys($this->getMetadata()->get(['scopes']));
+
+        $sql = "DELETE FROM array_value";
+        $this->getEntityManager()->getPdo()->query($sql);
+
+        foreach ($scopeList as $scope) {
+            if (!$this->getMetadata()->get(['scopes', $scope, 'entity'])) continue;
+            if ($this->getMetadata()->get(['scopes', $scope, 'disabled'])) continue;
+
+            $seed = $this->getEntityManager()->getEntity($scope);
+            if (!$seed) continue;
+
+            $attributeList = [];
+
+            foreach ($seed->getAttributes() as $attribute => $defs) {
+                if (!isset($defs['type']) || $defs['type'] !== \Espo\ORM\Entity::JSON_ARRAY) continue;
+                if (!$seed->getAttributeParam($attribute, 'storeArrayValues')) continue;
+                if ($seed->getAttributeParam($attribute, 'notStorable')) continue;
+                $attributeList[] = $attribute;
+            }
+            $select = ['id'];
+            $orGroup = [];
+            foreach ($attributeList as $attribute) {
+                $select[] = $attribute;
+                $orGroup[$attribute . '!='] = null;
+            }
+
+            $sql = $this->getEntityManager()->getQuery()->createSelectQuery($scope, [
+                'select' => $select,
+                'whereClause' => [
+                    'OR' => $orGroup
+                ]
+            ]);
+            $sth = $this->getEntityManager()->getPdo()->prepare($sql);
+            $sth->execute();
+
+            while ($dataRow = $sth->fetch(\PDO::FETCH_ASSOC)) {
+                $entity = $this->getEntityManager()->getEntityFactory()->create($scope);
+                $entity->set($dataRow);
+                $entity->setAsFetched();
+
+                foreach ($attributeList as $attribute) {
+                    $this->getEntityManager()->getRepository('ArrayValue')->storeEntityAttribute($entity, $attribute, true);
+                }
+            }
+        }
+    }
+
+    // TODO remove in 5.5.0
+    public function jobPopulateNotesTeamUser()
+    {
+        $aclManager = $this->getInjection('container')->get('aclManager');
+
+        $sql = $this->getEntityManager()->getQuery()->createSelectQuery('Note', [
+            'whereClause' => [
+                'parentId!=' => null,
+                'type=' => ['Relate', 'CreateRelated', 'EmailReceived', 'EmailSent', 'Assign', 'Create'],
+            ],
+            'limit' => 100000,
+            'orderBy' => [['number', 'DESC']]
+        ]);
+        $sth = $this->getEntityManager()->getPdo()->prepare($sql);
+        $sth->execute();
+
+        $i = 0;
+        while ($dataRow = $sth->fetch(\PDO::FETCH_ASSOC)) {
+            $i++;
+            $note = $this->getEntityManager()->getEntityFactory()->create('Note');
+            $note->set($dataRow);
+            $note->setAsFetched();
+
+            if ($note->get('relatedId') && $note->get('relatedType')) {
+                $targetType = $note->get('relatedType');
+                $targetId = $note->get('relatedId');
+            } else if ($note->get('parentId') && $note->get('parentType')) {
+                $targetType = $note->get('parentType');
+                $targetId = $note->get('parentId');
+            } else {
+                continue;
+            }
+
+            if (!$this->getEntityManager()->hasRepository($targetType)) continue;
+
+            try {
+                $entity = $this->getEntityManager()->getEntity($targetType, $targetId);
+                if (!$entity) continue;
+                $ownerUserIdAttribute = $aclManager->getImplementation($targetType)->getOwnerUserIdAttribute($entity);
+                $toSave = false;
+                if ($ownerUserIdAttribute) {
+                    if ($entity->getAttributeParam($ownerUserIdAttribute, 'isLinkMultipleIdList')) {
+                        $link = $entity->getAttributeParam($ownerUserIdAttribute, 'relation');
+                        $userIdList = $entity->getLinkMultipleIdList($link);
+                    } else {
+                        $userId = $entity->get($ownerUserIdAttribute);
+                        if ($userId) {
+                            $userIdList = [$userId];
+                        } else {
+                            $userIdList = [];
+                        }
+                    }
+                    if (!empty($userIdList)) {
+                        $note->set('usersIds', $userIdList);
+                        $toSave = true;
+                    }
+                }
+                if ($entity->hasLinkMultipleField('teams')) {
+                    $teamIdList = $entity->getLinkMultipleIdList('teams');
+                    if (!empty($teamIdList)) {
+                        $note->set('teamsIds', $teamIdList);
+                        $toSave = true;
+                    }
+                }
+                if ($toSave) {
+                    $this->getEntityManager()->saveEntity($note);
+                }
+            } catch (\Exception $e) {}
+        }
+    }
 }

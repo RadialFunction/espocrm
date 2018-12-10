@@ -1,8 +1,8 @@
 {
   "fields": {
-    "post": "Entrada",
+    "post": "Guardar",
     "attachments": "Adjuntos",
-    "targetType": "Objetivo",
+    "targetType": "Interés",
     "teams": "Equipos",
     "users": "Usuarios",
     "portals": "Portales",
@@ -29,6 +29,13 @@
       "teams": "a equipo(s) en particular",
       "all": "a todos los usuarios internos",
       "portals": "a los usuarios del portal"
+    },
+    "type": {
+      "Post": "Publicar"
     }
+  },
+  "links": {
+    "superParent": "Super Padre",
+    "related": "Relacionado"
   }
 }

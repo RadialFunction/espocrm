@@ -3,6 +3,7 @@
         "name": "Name",
         "userName": "User Name",
         "title": "Title",
+        "type": "Type",
         "isAdmin": "Is Admin",
         "defaultTeam": "Default Team",
         "emailAddress": "Email",
@@ -28,9 +29,14 @@
         "position": "Position in Team",
         "ipAddress": "IP Address",
         "passwordPreview": "Password Preview",
-        "isSuperAdmin": "Is Super Admin"
+        "isSuperAdmin": "Is Super Admin",
+        "lastAccess": "Last Access",
+        "apiKey": "API Key",
+        "secretKey": "Secret Key",
+        "authMethod": "Authentication Method"
     },
     "links": {
+        "defaultTeam": "Default Team",
         "teams": "Teams",
         "roles": "Roles",
         "notes": "Notes",
@@ -55,7 +61,8 @@
         "Email Accounts": "Email Accounts",
         "Portal": "Portal",
         "Create Portal User": "Create Portal User",
-        "Proceed w/o Contact": "Proceed w/o Contact"
+        "Proceed w/o Contact": "Proceed w/o Contact",
+        "Generate New API Key": "Generate New API Key"
     },
     "tooltips": {
         "defaultTeam": "All records created by this user will be related to this team by default.",
@@ -69,10 +76,6 @@
     },
     "messages": {
         "passwordWillBeSent": "Password will be sent to user's email address.",
-        "accountInfoEmailSubject": "EspoCRM User Access Info",
-        "accountInfoEmailBody": "Your access information:\n\nUsername: {userName}\nPassword: {password}\n\n{siteUrl}",
-        "passwordChangeLinkEmailSubject": "Change Password Request",
-        "passwordChangeLinkEmailBody": "You can change your password by following this link {link}. This unique URL will be expired soon.",
         "passwordChanged": "Password has been changed",
         "userCantBeEmpty": "Username can not be empty",
         "wrongUsernamePasword": "Wrong username/password",
@@ -90,6 +93,18 @@
             "Male": "Male",
             "Female": "Female",
             "Neutral": "Neutral"
+        },
+        "type": {
+            "regular": "Regular",
+            "admin": "Admin",
+            "portal": "Portal",
+            "system": "System",
+            "super-admin": "Super-Admin",
+            "api": "API"
+        },
+        "authMethod": {
+            "ApiKey": "API Key",
+            "Hmac": "HMAC"
         }
     },
     "boolFilters": {

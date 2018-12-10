@@ -79,11 +79,14 @@ class Converter
         'foreign'
     );
 
-    public function __construct(\Espo\Core\Utils\Metadata $metadata, \Espo\Core\Utils\File\Manager $fileManager, \Espo\Core\Utils\Database\Schema\Schema $databaseSchema)
+    protected $maxIndexLength;
+
+    public function __construct(\Espo\Core\Utils\Metadata $metadata, \Espo\Core\Utils\File\Manager $fileManager, \Espo\Core\Utils\Database\Schema\Schema $databaseSchema, \Espo\Core\Utils\Config $config = null)
     {
         $this->metadata = $metadata;
         $this->fileManager = $fileManager;
         $this->databaseSchema = $databaseSchema;
+        $this->config = $config;
 
         $this->typeList = array_keys(\Doctrine\DBAL\Types\Type::getTypesMap());
     }
@@ -96,6 +99,11 @@ class Converter
     protected function getFileManager()
     {
         return $this->fileManager;
+    }
+
+    protected function getConfig()
+    {
+        return $this->config;
     }
 
     /**
@@ -117,6 +125,15 @@ class Converter
     protected function getDatabaseSchema()
     {
         return $this->databaseSchema;
+    }
+
+    protected function getMaxIndexLength()
+    {
+        if (!isset($this->maxIndexLength)) {
+            $this->maxIndexLength = $this->getDatabaseSchema()->getDatabaseHelper()->getMaxIndexLength();
+        }
+
+        return $this->maxIndexLength;
     }
 
     /**
@@ -164,7 +181,7 @@ class Converter
         $schema = $this->getSchema(true);
 
         $indexList = SchemaUtils::getIndexList($ormMeta);
-        $fieldListExceededIndexMaxLength = SchemaUtils::getFieldListExceededIndexMaxLength($ormMeta, $this->getDatabaseSchema()->getMaxIndexLength());
+        $fieldListExceededIndexMaxLength = SchemaUtils::getFieldListExceededIndexMaxLength($ormMeta, $this->getMaxIndexLength());
 
         $tables = array();
         foreach ($ormMeta as $entityName => $entityParams) {
@@ -227,8 +244,10 @@ class Converter
             $tables[$entityName]->setPrimaryKey($primaryColumns);
 
             if (!empty($indexList[$entityName])) {
-                foreach($indexList[$entityName] as $indexName => $indexColumnList) {
-                    $tables[$entityName]->addIndex($indexColumnList, $indexName);
+                foreach($indexList[$entityName] as $indexName => $indexParams) {
+                    $indexColumnList = $indexParams['columns'];
+                    $indexFlagList = isset($indexParams['flags']) ? $indexParams['flags'] : array();
+                    $tables[$entityName]->addIndex($indexColumnList, $indexName, $indexFlagList);
                 }
             }
 
@@ -287,7 +306,7 @@ class Converter
 
         $table = $this->getSchema()->createTable($tableName);
         $table->addColumn('id', 'int', $this->getDbFieldParams(array(
-            'type' => 'int',
+            'type' => 'id',
             'len' => $this->defaultLength['int'],
             'autoincrement' => true,
         )));
@@ -354,11 +373,20 @@ class Converter
             }
         }
 
+        $databaseParams = $this->getConfig()->get('database');
+        if (!isset($databaseParams['charset']) || $databaseParams['charset'] == 'utf8mb4') {
+            $dbFieldParams['platformOptions'] = array(
+                'collation' => 'utf8mb4_unicode_ci',
+            );
+        }
+
         switch ($fieldParams['type']) {
             case 'id':
             case 'foreignId':
             case 'foreignType':
-                $fieldParams['utf8mb3'] = true;
+                if ($this->getMaxIndexLength() < 3072) {
+                    $fieldParams['utf8mb3'] = true;
+                }
                 break;
 
             case 'array':
@@ -377,9 +405,10 @@ class Converter
                 break;
         }
 
-        if (isset($fieldParams['autoincrement']) && $fieldParams['autoincrement']) {
+        if ($fieldParams['type'] != 'id' && isset($fieldParams['autoincrement']) && $fieldParams['autoincrement']) {
             $dbFieldParams['unique'] = true;
             $dbFieldParams['notnull'] = true;
+            $dbFieldParams['unsigned'] = true;
         }
 
         if (isset($fieldParams['utf8mb3']) && $fieldParams['utf8mb3']) {

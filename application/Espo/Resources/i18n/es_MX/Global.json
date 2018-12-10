@@ -8,25 +8,23 @@
     "EmailAccount": "Cuenta de Correo",
     "EmailAccountScope": "Cuenta de Correo",
     "OutboundEmail": "Correo Saliente",
-    "ScheduledJob": "Tarea Programada",
+    "ScheduledJob": "Tarea Agendada",
     "ExternalAccount": "Cuenta Externa",
-    "Extension": "Extension",
     "Dashboard": "Escritorio",
     "InboundEmail": "Correo Entrante",
-    "Stream": "Seguimiento",
+    "Stream": "Flujo",
     "Import": "Importar",
     "Template": "Plantilla",
     "Job": "Trabajo",
     "EmailFilter": "Filtro de correo",
-    "Portal": "Portal",
     "PortalRole": "Rol del Portal",
     "Attachment": "Datos adjuntos",
     "EmailFolder": "Carpeta del Correo",
     "PortalUser": "Portal del Usuario",
-    "ScheduledJobLogRecord": "Historial de Tareas Programadas",
+    "ScheduledJobLogRecord": "Historial de Tareas Agendadas",
     "PasswordChangeRequest": "Solicitar Cambio de Contraseña",
     "ActionHistoryRecord": "Historial de Acciones",
-    "AuthToken": "Token de Autorización",
+    "AuthToken": "Clave de Autorización",
     "UniqueId": "ID Único",
     "LastViewed": "Ultimo Visto",
     "Settings": "Configuración",
@@ -37,28 +35,27 @@
     "Export": "Exportar",
     "DynamicLogic": "Lógica Dinámica",
     "DashletOptions": "Opciones del Panel",
-    "Admin": "Admin",
-    "Global": "Global",
     "Preferences": "Preferencias",
     "EmailAddress": "Dirección de Correo",
-    "PhoneNumber": "Teléfono"
+    "PhoneNumber": "Teléfono",
+    "AuthLogRecord": "Registro en Hist. de Aut.",
+    "AuthFailLogRecord": "Registro en Hist. de Fallos de Aut.",
+    "EmailTemplateCategory": "Categorías de Formatos de Correo"
   },
   "scopeNamesPlural": {
     "Email": "Correos",
     "User": "Usuarios",
     "Team": "Equipos",
-    "Role": "Roles",
     "EmailTemplate": "Plantillas de Correo",
     "EmailAccount": "Cuentas de Correo Electrónico",
     "EmailAccountScope": "Cuentas de Correo Electrónico",
     "OutboundEmail": "Correos Salientes",
-    "ScheduledJob": "Tareas Programadas",
+    "ScheduledJob": "Tareas Agendadas",
     "ExternalAccount": "Cuentas Externas",
     "Extension": "Extensiones",
     "Dashboard": "Escritorio",
     "InboundEmail": "Grupo de Cuentas de Correo",
-    "Stream": "Seguimiento",
-    "Import": "Importar Resultados",
+    "Stream": "Flujo",
     "Template": "Plantillas",
     "Job": "Trabajos",
     "EmailFilter": "Filtros de Correo",
@@ -67,21 +64,23 @@
     "Attachment": "Datos adjuntos",
     "EmailFolder": "Carpetas del Correo",
     "PortalUser": "Usuarios del Portal",
-    "ScheduledJobLogRecord": "Historial de Tareas Programadas",
+    "ScheduledJobLogRecord": "Historial de Tareas Agendadas",
     "PasswordChangeRequest": "Solicitudes de Cambio de contraseña",
     "ActionHistoryRecord": "Historial de Acciones",
-    "AuthToken": "Tokens de Autorización",
+    "AuthToken": "Clave de Autorización",
     "UniqueId": "IDs Unicos",
-    "LastViewed": "Ultimos Revisados"
+    "LastViewed": "Ultimos Revisados",
+    "AuthLogRecord": "Historial de Autorizaciones",
+    "AuthFailLogRecord": "Hist. de Fallos de Aut.\n",
+    "EmailTemplateCategory": "Categorías de Formatos de Correo"
   },
   "labels": {
     "Misc": "Misceláneos",
-    "Merge": "Unir",
+    "Merge": "Generar",
     "None": "(vacío)",
     "Home": "Inicio",
     "by": "por",
     "Saved": "Guardado",
-    "Error": "Error",
     "Select": "Seleccionar",
     "Not valid": "No válido",
     "Please wait...": "Por favor espere...",
@@ -90,7 +89,7 @@
     "Uploading...": "Subiendo...",
     "Sending...": "Enviando...",
     "Merging...": "Fusionando...",
-    "Merged": "Fusionado",
+    "Merged": "Generado",
     "Removed": "Eliminado",
     "Posted": "Publicado",
     "Linked": "Ligado",
@@ -132,7 +131,7 @@
     "Admin": "Administrador",
     "About": "Acerca de EspoCRM",
     "Refresh": "Actualizar",
-    "Remove": "Remover",
+    "Remove": "Eliminar",
     "Options": "Opciones",
     "Username": "Nombre de Usuario",
     "Password": "Contraseña",
@@ -165,16 +164,15 @@
     "Active": "Activo",
     "Inactive": "Inactivo",
     "Write your comment here": "Escriba su comentario aquí",
-    "Post": "Entrada",
-    "Stream": "Seguimiento",
+    "Post": "Guardar",
+    "Stream": "Flujo",
     "Show more": "Mostrar mas",
-    "Dashlet Options": "Opciones de Cuadros",
+    "Dashlet Options": "Opciones del Panel",
     "Full Form": "Formulario Completo",
     "Insert": "Insertar",
     "Person": "Persona",
     "First Name": "Nombre",
     "Last Name": "Apellidos",
-    "Original": "Original",
     "You": "Tu",
     "you": "tu",
     "change": "cambiar",
@@ -193,15 +191,12 @@
     "Submit": "Enviar",
     "Close": "Cerrar",
     "Yes": "Si",
-    "No": "No",
     "Value": "Valor",
     "Current version": "Version Actual",
     "List View": "Vista de Lista",
     "Tree View": "Vista de árbol",
     "Unlink All": "Desligar todo",
-    "Total": "Total",
     "Print to PDF": "Imprimir PDF",
-    "Default": "Por Omisión",
     "Number": "Número",
     "From": "De",
     "To": "Para",
@@ -216,7 +211,16 @@
     "Self-Assign": "Auto-Asignar",
     "Self-Assigned": "Auto-Asignado",
     "Return to Application": "Regresar a la Aplicación",
-    "Select All Results": "Seleccionar Todos"
+    "Select All Results": "Seleccionar Todos",
+    "Expand": "Expander",
+    "Collapse": "Cerrar",
+    "New notifications": "Nuevas notificaciones",
+    "Manage Categories": "Administrar Categorías",
+    "Manage Folders": "Administrar Carpetas",
+    "Convert to": "Convertir a",
+    "View Personal Data": "Ver Datos Personales",
+    "Personal Data": "Datos Personales",
+    "Erase": "Borrar"
   },
   "messages": {
     "pleaseWait": "Por favor espere...",
@@ -228,10 +232,10 @@
     "fieldShouldBefore": "{field} debe estar antes de {otherField}",
     "fieldShouldBeBetween": "{field} debe estar entre {min} y {max}",
     "fieldBadPasswordConfirm": "{field} confirmado de forma incorrecta",
-    "resetPreferencesDone": "Se han restablecido las preferencias por omisión",
+    "resetPreferencesDone": "Se han restablecido las preferencias default",
     "confirmation": "¿Está seguro?",
     "unlinkAllConfirmation": "¿Realmente desea desvincular todos los registros relacionados?",
-    "resetPreferencesConfirmation": "¿Realmente desea restablecer las preferencias por omisión?",
+    "resetPreferencesConfirmation": "¿Realmente desea restablecer las preferencias default?",
     "removeRecordConfirmation": "¿Realmente desea eliminar registros?",
     "unlinkRecordConfirmation": "¿Realmente quiere desligar este registro?",
     "removeSelectedRecordsConfirmation": "¿Realmente desea eliminar los registros seleccionados?",
@@ -248,9 +252,8 @@
     "checkForNewNotifications": "Ver si hay nuevas notificaciones",
     "duplicate": "El registro que estás creando ya puede existir.",
     "dropToAttach": "Haga drop para adjuntar",
-    "streamPostInfo": "Escriba <strong>@username</strong> para indicar los usuarios de esta publicación.\n\nSintaxis disponible para los marcadores:\n`<code>código</code>`\n**<strong>texto en negrita</strong>**\n*<em>texto en itálica</em>*\n~<del>texto eliminado</del>~\n> marcador de bloque\n[texto de la liga](url) ",
-    "writeMessageToSelf": "Escriba un mensaje de seguimiento",
-    "checkForNewNotes": "Verifique si no hay actualizaciones al seguimiento",
+    "writeMessageToSelf": "Escribe un mensaje en tu flujo",
+    "checkForNewNotes": "Verificar si hay nuevos flujos",
     "internalPost": "La publicación sólo será vista por los usuarios internos",
     "done": "Enviados",
     "confirmMassFollow": "¿Realmente quieres marcar con seguimiento a los registros seleccionados?",
@@ -268,7 +271,14 @@
     "fieldShouldBeDatetime": "{field} deber{ia ser una fecha/hr válida",
     "internalPostTitle": "Lo publicado sólo lo verán los usuarios internos",
     "loading": "Cargando...",
-    "saving": "Guardando..."
+    "saving": "Guardando...",
+    "fieldMaxFileSizeError": "El archivo no debe exceder {max} Mb",
+    "fieldShouldBeLess": "{field} no debe ser mayor a {value}",
+    "fieldShouldBeGreater": "{field} no debe ser menor que {value}",
+    "fieldIsUploading": "Carga en prograso",
+    "streamPostInfo": "Escriba <strong>@username</strong> para indicar los usuarios de esta publicación.\n\nSintaxis disponible para los marcadores:\n`<code>código</code>`\n**<strong>texto en negrita</strong>**\n*<em>texto en itálica</em>*\n~<del>texto eliminado</del>~\n> marcador de bloque\n[texto de la liga](url) ",
+    "erasePersonalDataConfirmation": "¿Realmente desea borrar permanentemente los campos seleccionados?",
+    "massPrintPdfMaxCountError": "No se pueden imprimir mas de {maxCount} registros."
   },
   "boolFilters": {
     "onlyMy": "Sólo míos",
@@ -279,12 +289,14 @@
     "all": "Todos"
   },
   "massActions": {
-    "remove": "Remover",
-    "merge": "Unir",
+    "remove": "Eliminar",
+    "merge": "Generar",
     "massUpdate": "Actualización Masiva",
     "export": "Exportar",
     "follow": "Dar seguimiento",
-    "unfollow": "Quitar seguimiento"
+    "unfollow": "Quitar seguimiento",
+    "convertCurrency": "Convertir Moneda",
+    "printPdf": "Imprimir a PDF"
   },
   "fields": {
     "name": "Nombre",
@@ -311,21 +323,26 @@
     "order": "Orden",
     "parent": "Padre",
     "children": "Hijos",
-    "id": "ID"
+    "emailAddressData": "Datos de la Dirección de Correo",
+    "phoneNumberData": "Datos del Número de Teléfono",
+    "ids": "ID's",
+    "names": "Nombres",
+    "emailAddressIsOptedOut": "La dirección de correo está Confirmada",
+    "targetListIsOptedOut": "Se ha Excluido (De la Lista)",
+    "type": "Tipo"
   },
   "links": {
     "assignedUser": "Usuario Asignado",
     "createdBy": "Creado por",
     "modifiedBy": "Modificado Por",
     "team": "Equipo",
-    "roles": "Roles",
     "teams": "Equipos",
     "users": "Usuarios",
     "parent": "Padre",
     "children": "Hijos"
   },
   "dashlets": {
-    "Stream": "Seguimiento",
+    "Stream": "Flujo",
     "Emails": "Mi Bandeja de Entrada",
     "Records": "Lista de Registros"
   },
@@ -450,8 +467,7 @@
     "salutationName": {
       "Mr.": "Sr.",
       "Mrs.": "Sra.",
-      "Ms.": "Srta.",
-      "Dr.": "Dr."
+      "Ms.": "Srta."
     },
     "language": {
       "af_ZA": "Afrikáans",
@@ -480,7 +496,6 @@
       "gl_ES": "Gallego",
       "gn_PY": "Guaraní",
       "he_IL": "Hebreo",
-      "hi_IN": "Hindi",
       "hr_HR": "Croata",
       "hu_HU": "Hungaro",
       "hy_AM": "Armenio",
@@ -514,13 +529,11 @@
       "sr_RS": "Serbio",
       "sv_SE": "Sueco",
       "sw_KE": "Suajili",
-      "ta_IN": "Tamil",
       "te_IN": "Télugu",
       "th_TH": "Tailandés",
       "tl_PH": "Tagalo",
       "tr_TR": "Turco",
       "uk_UA": "Ucraniano",
-      "ur_PK": "Urdu",
       "vi_VN": "Vietnamita",
       "zh_CN": "Chino Simplificado (China)",
       "zh_HK": "Chino Tradicional (Hong Kong)",
@@ -548,7 +561,8 @@
       "ever": "Nunca",
       "isEmpty": "Está Vacío",
       "olderThanXDays": "Mayor de \"X\" Días",
-      "afterXDays": "Después de \"X\" Días"
+      "afterXDays": "Después de \"X\" Días",
+      "nextMonth": "Siguiente mes"
     },
     "searchRanges": {
       "is": "Es",
@@ -595,7 +609,6 @@
     "phoneNumber": {
       "Mobile": "Teléfono móvil",
       "Office": "Oficina",
-      "Fax": "Fax",
       "Home": "Hogar",
       "Other": "Otro"
     }
@@ -625,7 +638,7 @@
         "dragImageHere": "Arrastre la imagen aquí",
         "selectFromFiles": "Seleccionar desde Archivo",
         "url": "Url de Imagen",
-        "remove": "Remover Imagen"
+        "remove": "Eliminar Imagen"
       },
       "link": {
         "link": "Enlace",
@@ -637,11 +650,9 @@
         "openInNewWindow": "Abrir en nueva ventana"
       },
       "video": {
-        "video": "Video",
         "videoLink": "Enlace al Video",
         "insert": "Insertar Video",
-        "url": "¿URL del Video?",
-        "providers": "(YouTube, Vimeo, Vine, Instagram, or DailyMotion)"
+        "url": "¿URL del Video?"
       },
       "table": {
         "table": "Tabla"
@@ -651,7 +662,6 @@
       },
       "style": {
         "style": "Estilo",
-        "normal": "Normal",
         "blockquote": "Cita",
         "pre": "Código",
         "h1": "Encabezado 1",
@@ -703,21 +713,24 @@
       }
     }
   },
-  "themes": {
-    "Espo": "Espo",
-    "Sakura": "Sakura",
-    "Violet": "Violeta",
-    "EspoRtl": "RTL Espo",
-    "EspoVertical": "Espo c/panel axiliar",
-    "SakuraVertical": "Sakura c/panel auxiliar",
-    "VioletVertical": "Violeta c/panel auxiliar",
-    "Hazyblue": "Hazyblue",
-    "HazyblueVertical": "Hazyblue c/panel auxiliar"
-  },
   "streamMessagesMale": {
     "postTargetSelfAndOthers": "{user} publicó a {target} con copia para sí mismo"
   },
   "streamMessagesFemale": {
     "postTargetSelfAndOthers": "{user} publicó a {target} y a sí mismo"
+  },
+  "listViewModes": {
+    "list": "Lista",
+    "kanban": "Tarjetas"
+  },
+  "themes": {
+    "Espo": "Espo Clásico",
+    "Sakura": "Sakura Clásico",
+    "EspoVertical": "Espo Vertical",
+    "SakuraVertical": "Sakura Vertical",
+    "Violet": "Violeta Clásico",
+    "VioletVertical": "Violeta Vertical",
+    "Hazyblue": "Azul Clásico",
+    "HazyblueVertical": "Azul Vertical"
   }
 }

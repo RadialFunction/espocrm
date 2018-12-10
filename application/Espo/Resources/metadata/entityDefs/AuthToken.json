@@ -27,7 +27,7 @@
         },
         "ipAddress": {
             "type": "varchar",
-            "maxLength": "36",
+            "maxLength": "45",
             "readOnly": true
         },
         "isActive": {
@@ -63,8 +63,8 @@
         }
     },
     "collection": {
-        "sortBy": "lastAccess",
-        "asc": false,
+        "orderBy": "lastAccess",
+        "order": "desc",
         "textFilterFields": ["ipAddress", "userName"]
     },
     "indexes": {

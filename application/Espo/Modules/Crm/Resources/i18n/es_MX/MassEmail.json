@@ -11,13 +11,14 @@
     "campaign": "Campaña",
     "emailTemplate": "Plantilla de Correo",
     "inboundEmail": "Cuenta de correo",
-    "targetLists": "Lista de Objetivos",
-    "excludingTargetLists": "Listas de Objetivos Excluídas",
-    "optOutEntirely": "Confirmación Completada"
+    "targetLists": "Lista de Intereses",
+    "excludingTargetLists": "Listas de Intereses Excluídos",
+    "optOutEntirely": "Confirmación Completada",
+    "smtpAccount": "Cuenta SMTP"
   },
   "links": {
-    "targetLists": "Listas de Objetivos",
-    "excludingTargetLists": "Listas de Objetivos Excluídas",
+    "targetLists": "Listas de Intereses",
+    "excludingTargetLists": "Listas de Intereses Excluídos",
     "queueItems": "Items en cola",
     "campaign": "Campaña",
     "emailTemplate": "Plantilla de Correo",
@@ -35,19 +36,22 @@
   },
   "labels": {
     "Create MassEmail": "Crear correo masivo",
-    "Send Test": "Enviar prueba"
+    "Send Test": "Enviar prueba",
+    "System SMTP": "Sistema SMTP",
+    "system": "sistema",
+    "group": "grupo"
   },
   "messages": {
-    "selectAtLeastOneTarget": "Seleccione al menos un objetivo.",
+    "selectAtLeastOneTarget": "Seleccione al menos un interés",
     "testSent": "Correo(s) de prueba que se enviarán"
   },
   "tooltips": {
     "optOutEntirely": "Los correos de destinatarios que cancelaron su suscripción serán marcados como rechazados y ya no recibirán correos masivos.",
-    "targetLists": "Los objetivos que deben recibir los mensajes.",
-    "excludingTargetLists": "Los objetivos que no deben recibir mensajes."
+    "targetLists": "Los intereses que deben recibir los mensajes.",
+    "excludingTargetLists": "Los intereses que no deben recibir mensajes.",
+    "storeSentEmails": "Los correos se guardarán en el CRM."
   },
   "presetFilters": {
-    "actual": "Actual",
     "complete": "Completo"
   }
 }

@@ -6,19 +6,16 @@
   "fields": {
     "name": "Nome",
     "status": "Stato",
-    "file": "File",
     "type": "Tipo",
     "publishDate": "Data di pubblicazione",
     "expirationDate": "Data di scadenza",
     "description": "Descrizione",
-    "accounts": "Accounts",
     "folder": "Cartella"
   },
   "links": {
     "accounts": "Account",
     "opportunities": "Opportunita'",
     "folder": "Cartella",
-    "leads": "Comando",
     "contacts": "Contatti"
   },
   "options": {
@@ -31,8 +28,6 @@
     "type": {
       "": "Nessun",
       "Contract": "Contratto",
-      "NDA": "NDA",
-      "EULA": "EULA",
       "License Agreement": "Contratto di licenza"
     }
   },

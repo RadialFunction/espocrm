@@ -108,11 +108,17 @@ Espo.define('views/admin/layouts/base', 'view', function (Dep) {
         fetch: function () {},
 
         setup: function () {
-            this.dataAttributeList = _.clone(this.dataAttributeList);
             this.buttonList = _.clone(this.buttonList);
             this.events = _.clone(this.events);
             this.scope = this.options.scope;
             this.type = this.options.type;
+
+            this.dataAttributeList =
+                this.getMetadata().get(['clientDefs', this.scope, 'additionalLayouts', this.type, 'dataAttributeList'])
+                ||
+                this.dataAttributeList;
+
+            this.dataAttributeList = Espo.Utils.clone(this.dataAttributeList);
         },
 
         unescape: function (string) {
@@ -146,6 +152,7 @@ Espo.define('views/admin/layouts/base', 'view', function (Dep) {
             }, function (view) {
                 view.render();
                 this.listenToOnce(view, 'after:save', function (attributes) {
+                    this.trigger('update-item', name, attributes);
                     var $li = $("#layout ul > li[data-name='" + name + "']");
                     for (var key in attributes) {
                         $li.attr('data-' + key, attributes[key]);

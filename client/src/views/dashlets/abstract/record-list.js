@@ -85,13 +85,27 @@ Espo.define('views/dashlets/abstract/record-list', ['views/dashlets/abstract/bas
                 }
 
                 this.collection = collection;
-                collection.sortBy = this.getOption('sortBy') || this.collection.sortBy;
-                collection.asc = this.getOption('asc') || this.collection.asc;
+
+                collection.orderBy = this.getOption('orderBy') || this.getOption('sortBy') || this.collection.orderBy;
+
+                if (this.getOption('orderBy')) {
+                    collection.order = 'asc';
+                }
+
+                if (this.hasOption('asc')) {
+                    collection.order = this.getOption('asc') ? 'asc' : false;
+                }
 
                 if (this.getOption('sortDirection') === 'asc') {
-                    collection.asc = true;
+                    collection.order = 'asc';
                 } else if (this.getOption('sortDirection') === 'desc') {
-                    collection.asc = false;
+                    collection.order = 'desc';
+                }
+
+                if (this.getOption('order') === 'asc') {
+                    collection.order = 'order';
+                } else if (this.getOption('order') === 'desc') {
+                    collection.order = 'desc';
                 }
 
                 collection.maxSize = this.getOption('displayRecords');
@@ -99,22 +113,24 @@ Espo.define('views/dashlets/abstract/record-list', ['views/dashlets/abstract/bas
 
                 var viewName = this.listView || ((this.layoutType == 'expanded') ? this.listViewExpanded : this.listViewColumn);
 
-                this.listenToOnce(collection, 'sync', function () {
-                    this.createView('list', viewName, {
-                        collection: collection,
-                        el: this.getSelector() + ' .list-container',
-                        pagination: this.getOption('pagination') ? 'bottom' : false,
-                        type: 'listDashlet',
-                        rowActionsView: this.rowActionsView,
-                        checkboxes: false,
-                        showMore: true,
-                        listLayout: this.getOption(this.layoutType + 'Layout')
-                    }, function (view) {
-                        view.render();
-                    });
-                }, this);
-
-                collection.fetch();
+                this.createView('list', viewName, {
+                    collection: collection,
+                    el: this.getSelector() + ' .list-container',
+                    pagination: this.getOption('pagination') ? 'bottom' : false,
+                    type: 'listDashlet',
+                    rowActionsView: this.rowActionsView,
+                    checkboxes: false,
+                    showMore: true,
+                    listLayout: this.getOption(this.layoutType + 'Layout'),
+                    skipBuildRows: true
+                }, function (view) {
+                    view.getSelectAttributeList(function (selectAttributeList) {
+                        if (selectAttributeList) {
+                            collection.data.select = selectAttributeList.join(',');
+                        }
+                        collection.fetch();
+                    }.bind(this));
+                });
 
             }, this);
         },
@@ -124,7 +140,7 @@ Espo.define('views/dashlets/abstract/record-list', ['views/dashlets/abstract/bas
                 this.actionList.unshift({
                     name: 'create',
                     html: this.translate('Create ' + this.scope, 'labels', this.scope),
-                    iconHtml: '<span class="glyphicon glyphicon-plus"></span>',
+                    iconHtml: '<span class="fas fa-plus"></span>',
                     url: '#'+this.scope+'/create'
                 });
             }
@@ -139,6 +155,17 @@ Espo.define('views/dashlets/abstract/record-list', ['views/dashlets/abstract/bas
 
         actionCreate: function () {
             var attributes = this.getCreateAttributes() || {};
+
+            if (this.getOption('populateAssignedUser')) {
+                if (this.getMetadata().get(['entityDefs', this.scope, 'fields', 'assignedUsers'])) {
+                    attributes['assignedUsersIds'] = [this.getUser().id];
+                    attributes['assignedUsersNames'] = {};
+                    attributes['assignedUsersNames'][this.getUser().id] = this.getUser().get('name');
+                } else {
+                    attributes['assignedUserId'] = this.getUser().id;
+                    attributes['assignedUserName'] = this.getUser().get('name');
+                }
+            }
 
             this.notify('Loading...');
             var viewName = this.getMetadata().get('clientDefs.' + this.scope + '.modalViews.edit') || 'views/modals/edit';

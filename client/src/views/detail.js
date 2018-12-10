@@ -60,8 +60,7 @@ Espo.define('views/detail', 'views/main', function (Dep) {
                 name: 'follow',
                 label: 'Follow',
                 style: 'default',
-                icon: 'glyphicon glyphicon-share-alt',
-                html: '<span class="glyphicon glyphicon-share-alt"></span> ' + this.translate('Follow'),
+                html: '<span class="fas fa-rss fa-sm"></span> ' + this.translate('Follow'),
                 action: 'follow'
             }, true);
         },
@@ -92,6 +91,15 @@ Espo.define('views/detail', 'views/main', function (Dep) {
                 el: '#main > .header',
                 scope: this.scope
             });
+
+            this.listenTo(this.model, 'sync', function (model) {
+                if (model && model.hasChanged('name')) {
+                    if (this.getView('header')) {
+                        this.getView('header').reRender();
+                    }
+                    this.updatePageTitle();
+                }
+            }, this);
         },
 
         setupRecord: function () {
@@ -165,8 +173,10 @@ Espo.define('views/detail', 'views/main', function (Dep) {
 
             var rootUrl = this.options.rootUrl || this.options.params.rootUrl || '#' + this.scope;
 
+            var headerIconHtml = this.getHeaderIconHtml();
+
             return this.buildHeaderHtml([
-                '<a href="' + rootUrl + '" class="action" data-action="navigateToRoot">' + this.getLanguage().translate(this.scope, 'scopeNamesPlural') + '</a>',
+                headerIconHtml + '<a href="' + rootUrl + '" class="action" data-action="navigateToRoot">' + this.getLanguage().translate(this.scope, 'scopeNamesPlural') + '</a>',
                 name
             ]);
         },
@@ -241,13 +251,7 @@ Espo.define('views/detail', 'views/main', function (Dep) {
             var scope = this.model.defs['links'][link].entity;
             var foreign = this.model.defs['links'][link].foreign;
 
-            var massRelateEnabled = false;
-            if (foreign) {
-                var foreignType = this.getMetadata().get('entityDefs.' + scope + '.links.' + foreign + '.type');
-                if (foreignType == 'hasMany') {
-                    massRelateEnabled = true;
-                }
-            }
+            var massRelateEnabled = data.massSelect;
 
             var self = this;
             var attributes = {};

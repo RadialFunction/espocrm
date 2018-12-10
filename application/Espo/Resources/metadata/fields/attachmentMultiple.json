@@ -15,13 +15,20 @@
          "type": "float",
          "tooltip": true,
          "min": 0
+      },
+      {
+         "name": "previewSize",
+         "type": "enum",
+         "default": "medium",
+         "options": ["", "x-small", "small", "medium", "large"]
       }
    ],
    "actualFields":[
       "ids"
    ],
    "notActualFields":[
-      "names"
+      "names",
+      "types"
    ],
    "linkDefs": {
       "type": "hasChildren",
@@ -30,9 +37,8 @@
       "layoutRelationshipsDisabled": true,
       "relationName": "attachments"
    },
+   "notSortable": true,
    "filter": true,
-   "fieldDefs": {
-      "layoutListDisabled": true
-   },
-   "hookClassName": "\\Espo\\Core\\Utils\\FieldManager\\Hooks\\AttachmentMultipleType"
+   "hookClassName": "\\Espo\\Core\\Utils\\FieldManager\\Hooks\\AttachmentMultipleType",
+   "personalData": true
 }

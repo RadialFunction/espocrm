@@ -37,7 +37,9 @@ Espo.define('crm:views/contact/detail', 'views/detail', function (Dep) {
             },
             'cases': {
                 'accountId': 'accountId',
-                'accountName': 'accountName'
+                'accountName': 'accountName',
+                'id': 'contactId',
+                'name': 'contactName',
             }
         },
 
@@ -46,10 +48,13 @@ Espo.define('crm:views/contact/detail', 'views/detail', function (Dep) {
                 'account': function () {
                     if (this.model.get('accountId')) {
                         return {
-                            field: 'accountId',
+                            attribute: 'accountId',
                             type: 'equals',
                             value: this.model.get('accountId'),
-                            valueName: this.model.get('accountName')
+                            data: {
+                                type: 'is',
+                                nameValue: this.model.get('accountName')
+                            }
                         };
                     }
                 }
@@ -58,10 +63,13 @@ Espo.define('crm:views/contact/detail', 'views/detail', function (Dep) {
                 'account': function () {
                     if (this.model.get('accountId')) {
                         return {
-                            field: 'accountId',
+                            attribute: 'accountId',
                             type: 'equals',
                             value: this.model.get('accountId'),
-                            valueName: this.model.get('accountName')
+                            data: {
+                                type: 'is',
+                                nameValue: this.model.get('accountName')
+                            }
                         };
                     }
                 }
@@ -70,4 +78,3 @@ Espo.define('crm:views/contact/detail', 'views/detail', function (Dep) {
 
     });
 });
-

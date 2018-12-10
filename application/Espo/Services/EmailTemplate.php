@@ -63,7 +63,7 @@ class EmailTemplate extends Record
         return $this->getInjection('language');
     }
 
-    public function parseTemplate(Entity $emailTemplate, array $params = array(), $copyAttachments = false)
+    public function parseTemplate(Entity $emailTemplate, array $params = [], $copyAttachments = false, $skipAcl = false)
     {
         $entityHash = array();
         if (!empty($params['entityHash']) && is_array($params['entityHash'])) {
@@ -75,9 +75,9 @@ class EmailTemplate extends Record
         }
 
         if (!empty($params['emailAddress'])) {
-            $emailAddress = $this->getEntityManager()->getRepository('EmailAddress')->where(array(
+            $emailAddress = $this->getEntityManager()->getRepository('EmailAddress')->where([
                 'lower' => $params['emailAddress']
-            ))->findOne();
+            ])->findOne();
 
             $entity = $this->getEntityManager()->getRepository('EmailAddress')->getEntityByAddress($params['emailAddress']);
 
@@ -121,10 +121,10 @@ class EmailTemplate extends Record
         $body = $emailTemplate->get('body');
 
         foreach ($entityHash as $type => $entity) {
-            $subject = $this->parseText($type, $entity, $subject);
+            $subject = $this->parseText($type, $entity, $subject, false, null, $skipAcl);
         }
         foreach ($entityHash as $type => $entity) {
-            $body = $this->parseText($type, $entity, $body);
+            $body = $this->parseText($type, $entity, $body, false, null, $skipAcl);
         }
 
         $attachmentsIds = array();
@@ -154,13 +154,13 @@ class EmailTemplate extends Record
             }
         }
 
-        return array(
+        return [
             'subject' => $subject,
             'body' => $body,
             'attachmentsIds' => $attachmentsIds,
             'attachmentsNames' => $attachmentsNames,
             'isHtml' => $emailTemplate->get('isHtml')
-        );
+        ];
     }
 
     public function parse($id, array $params = array(), $copyAttachments = false)
@@ -173,14 +173,26 @@ class EmailTemplate extends Record
         return $this->parseTemplate($emailTemplate, $params, $copyAttachments);
     }
 
-    protected function parseText($type, Entity $entity, $text, $skipLinks = false, $prefixLink = null)
+    protected function parseText($type, Entity $entity, $text, $skipLinks = false, $prefixLink = null, $skipAcl = false)
     {
         $fieldList = array_keys($entity->getAttributes());
 
-        $forbidenAttributeList = $this->getAcl()->getScopeForbiddenAttributeList($entity->getEntityType(), 'read');
+        if ($skipAcl) {
+            $forbiddenAttributeList = [];
+            $forbiddenLinkList = [];
+        } else {
+            $forbiddenAttributeList = $this->getAcl()->getScopeForbiddenAttributeList($entity->getEntityType(), 'read');
+
+            $forbiddenAttributeList = array_merge(
+                $forbiddenAttributeList,
+                $this->getAcl()->getScopeRestrictedAttributeList($entity->getEntityType(), ['forbidden', 'internal', 'onlyAdmin'])
+            );
+
+            $forbiddenLinkList = $this->getAcl()->getScopeRestrictedLinkList($entity->getEntityType(), ['forbidden', 'internal', 'onlyAdmin']);
+        }
 
         foreach ($fieldList as $field) {
-            if (in_array($field, $forbidenAttributeList)) continue;
+            if (in_array($field, $forbiddenAttributeList)) continue;
 
             $value = $entity->get($field);
             if (is_object($value)) {
@@ -227,6 +239,7 @@ class EmailTemplate extends Record
         if (!$skipLinks) {
             $relationDefs = $entity->getRelations();
             foreach ($entity->getRelationList() as $relation) {
+                if (in_array($relation, $forbiddenLinkList)) continue;
                 if (
                     !empty($relationDefs[$relation]['type'])
                     &&
@@ -238,13 +251,19 @@ class EmailTemplate extends Record
                         if (!$this->getAcl()->check($relatedEntity, 'read')) continue;
                     }
 
-                    $text = $this->parseText($type, $relatedEntity, $text, true, $relation);
+                    $text = $this->parseText($type, $relatedEntity, $text, true, $relation, $skipAcl);
                 }
             }
         }
 
+        $replaceData = [];
+        $replaceData['today'] = $this->getDateTime()->getTodayString();
+        $replaceData['now'] = $this->getDateTime()->getNowString();
+
+        foreach ($replaceData as $key => $value) {
+            $text = str_replace('{' . $key . '}', $value, $text);
+        }
 
         return $text;
     }
 }
-

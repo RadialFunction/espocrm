@@ -35,8 +35,5 @@ use \Espo\Core\Exceptions\NotFound;
 
 class AuthToken extends Record
 {
-    protected $internalAttributeList = ['hash', 'token'];
-
     protected $actionHistoryDisabled = true;
 }
-

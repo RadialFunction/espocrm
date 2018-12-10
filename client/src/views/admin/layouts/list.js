@@ -30,11 +30,15 @@ Espo.define('views/admin/layouts/list', 'views/admin/layouts/rows', function (De
 
     return Dep.extend({
 
-        dataAttributeList: ['name', 'width', 'link', 'notSortable', 'align', 'view', 'customLabel'],
+        dataAttributeList: ['name', 'width', 'link', 'notSortable', 'align', 'view', 'customLabel', 'widthPx'],
 
         dataAttributesDefs: {
             link: {type: 'bool'},
-            width: {type: 'float'},
+            width: {
+                type: 'float',
+                min: 0,
+                max: 100
+            },
             notSortable: {type: 'bool'},
             align: {
                 type: 'enum',
@@ -46,6 +50,10 @@ Espo.define('views/admin/layouts/list', 'views/admin/layouts/rows', function (De
             },
             customLabel: {
                 type: 'varchar',
+                readOnly: true
+            },
+            widthPx: {
+                type: 'int',
                 readOnly: true
             },
             name: {
@@ -123,10 +131,18 @@ Espo.define('views/admin/layouts/list', 'views/admin/layouts/rows', function (De
                         duplicateLabelList.push(label);
                     }
                     labelList.push(label);
-                    this.disabledFields.push({
-                        name: allFields[i],
+                    var fieldName = allFields[i];
+                    var o = {
+                        name: fieldName,
                         label: label
-                    });
+                    };
+                    var fieldType = this.getMetadata().get(['entityDefs', this.scope, 'fields', fieldName, 'type']);
+                    if (fieldType) {
+                        if (this.getMetadata().get(['fields', fieldType, 'notSortable'])) {
+                            o.notSortable = true;
+                        }
+                    }
+                    this.disabledFields.push(o);
                 }
             }
 
@@ -151,13 +167,13 @@ Espo.define('views/admin/layouts/list', 'views/admin/layouts/rows', function (De
                     }
                 }, this);
                 this.rowLayout[i].label = label;
+
+                this.itemsData[this.rowLayout[i].name] = Espo.Utils.cloneDeep(this.rowLayout[i]);
             }
         },
 
         checkFieldType: function (type) {
-            if (['linkMultiple'].indexOf(type) != -1) {
-                return false;
-            }
+
             return true;
         },
 

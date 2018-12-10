@@ -76,6 +76,24 @@ class Settings extends \Espo\Core\Controllers\Base
             throw new BadRequest();
         }
 
+        $ignoreItemList = [];
+
+        $systemOnlyItemList = $this->getConfig()->getSystemOnlyItemList();
+        foreach ($systemOnlyItemList as $item) {
+            $ignoreItemList[] = $item;
+        }
+
+        if ($this->getConfig()->get('restrictedMode') && !$this->getUser()->isSuperAdmin()) {
+            $superAdminOnlyItemList = $this->getConfig()->getSuperAdminOnlyItemList();
+            foreach ($superAdminOnlyItemList as $item) {
+                $ignoreItemList[] = $item;
+            }
+        }
+
+        foreach ($ignoreItemList as $item) {
+            unset($data->$item);
+        }
+
         if (
             (isset($data->useCache) && $data->useCache !== $this->getConfig()->get('useCache'))
             ||
@@ -90,11 +108,9 @@ class Settings extends \Espo\Core\Controllers\Base
             throw new Error('Cannot save settings');
         }
 
-        /** Rebuild for Currency Settings */
-        if (isset($data->baseCurrency) || isset($data->currencyRates)) {
+        if (isset($data->defaultCurrency) || isset($data->baseCurrency) || isset($data->currencyRates)) {
             $this->getContainer()->get('dataManager')->rebuildDatabase([]);
         }
-        /** END Rebuild for Currency Settings */
 
         return $this->getConfigData();
     }

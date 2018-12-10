@@ -7,22 +7,32 @@
         },
         "status": {
             "type": "enum",
-            "options": ["Pending", "Running", "Success", "Failed"],
-            "default": "Pending"
+            "options": ["Pending", "Ready", "Running", "Success", "Failed"],
+            "default": "Pending",
+            "style": {
+                "Success": "success",
+                "Failed": "danger",
+                "Running": "warning",
+                "Ready": "warning"
+            }
         },
         "executeTime": {
             "type": "datetime",
             "required": true
         },
+        "number": {
+            "type": "int",
+            "index": true,
+            "readOnly": true,
+            "view": "views/fields/autoincrement",
+            "dbType": "bigint",
+            "unique": true,
+            "autoincrement": true
+        },
         "serviceName": {
             "type": "varchar",
             "required": true,
             "maxLength": 100
-        },
-        "method": {
-            "type": "varchar",
-            "required": true,
-            "maxLength":100
         },
         "methodName": {
             "type": "varchar",
@@ -38,6 +48,14 @@
             "type": "foreign",
             "link": "scheduledJob",
             "field": "job"
+        },
+        "queue": {
+            "type": "varchar",
+            "maxLength": 36,
+            "default": null
+        },
+        "executedAt": {
+            "type": "datetime"
         },
         "pid": {
             "type": "int"
@@ -72,8 +90,8 @@
         }
     },
     "collection": {
-        "sortBy": "createdAt",
-        "asc": false,
+        "orderBy": "number",
+        "order": "desc",
         "textFilterFields": ["name", "methodName", "serviceName", "scheduledJobName"]
     },
     "indexes": {

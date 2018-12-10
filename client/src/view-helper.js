@@ -81,6 +81,32 @@ Espo.define('view-helper', [], function () {
             return text;
         },
 
+        getAvatarHtml: function (id, size, width, additionalClassName) {
+            if (this.config.get('avatarsDisabled')) {
+                return '';
+            }
+
+            var t;
+            var cache = this.cache;
+            if (cache) {
+                t = cache.get('app', 'timestamp');
+            } else {
+                t = Date.now();
+            }
+
+            var basePath = this.basePath || '';
+            var size = size || 'small';
+
+            var width = (width || 16).toString();
+
+            var className = 'avatar';
+            if (additionalClassName) {
+                className += ' ' + additionalClassName;
+            }
+
+            return '<img class="'+className+'" width="'+width+'" src="'+basePath+'?entryPoint=avatar&size='+size+'&id=' + id + '&t='+t+'">';
+        },
+
         _registerHandlebarsHelpers: function () {
             var self = this;
 
@@ -160,7 +186,7 @@ Espo.define('view-helper', [], function () {
                 var scope = options.hash.scope || null;
                 var label = options.hash.label || name;
 
-                var html = options.hash.label.html || self.language.translate(label, 'labels', scope);
+                var html = options.hash.html || options.hash.text || self.language.translate(label, 'labels', scope);
                 return new Handlebars.SafeString('<button class="btn btn-'+style+' action'+ (options.hash.hidden ? ' hidden' : '')+'" data-action="'+name+'" type="button">'+html+'</button>');
             });
 
@@ -263,6 +289,30 @@ Espo.define('view-helper', [], function () {
             Handlebars.registerHelper('basePath', function () {
                 return self.basePath || '';
             });
+        },
+
+        getScopeColorIconHtml: function (scope, noWhiteSpace, additionalClassName) {
+            if (this.config.get('scopeColorsDisabled') || this.preferences.get('scopeColorsDisabled')) {
+                return '';
+            }
+
+            var color = this.metadata.get(['clientDefs', scope, 'color']);
+            var html = '';
+
+            if (color) {
+                var $span = $('<span class="color-icon fas fa-square-full">');
+                $span.css('color', color);
+                if (additionalClassName) {
+                    $span.addClass(additionalClassName);
+                }
+                html = $span.get(0).outerHTML;
+            }
+
+            if (!noWhiteSpace) {
+                if (html) html += '&nbsp;';
+            }
+
+            return html;
         }
     });
 

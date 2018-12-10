@@ -32,7 +32,7 @@ Espo.define('views/fields/file', 'views/fields/link', function (Dep) {
 
         type: 'file',
 
-        listTemplate: 'fields/file/detail',
+        listTemplate: 'fields/file/list',
 
         detailTemplate: 'fields/file/detail',
 
@@ -108,6 +108,8 @@ Espo.define('views/fields/file', 'views/fields/link', function (Dep) {
                 data.sourceList = this.sourceList;
             }
 
+            data.valueIsSet = this.model.has(this.idName);
+
             return data;
         },
 
@@ -122,7 +124,7 @@ Espo.define('views/fields/file', 'views/fields/link', function (Dep) {
         validateRequired: function () {
             if (this.isRequired()) {
                 if (this.model.get(this.idName) == null) {
-                    var msg = this.translate('fieldIsRequired', 'messages').replace('{field}', this.translate(this.name, 'fields', this.model.name));
+                    var msg = this.translate('fieldIsRequired', 'messages').replace('{field}', this.getLabelText());
                     var $target;
                     if (this.isUploading) {
                         $target = this.$el.find('.gray-box');
@@ -139,7 +141,7 @@ Espo.define('views/fields/file', 'views/fields/link', function (Dep) {
         validateReady: function () {
             if (this.isUploading) {
                 var $target = this.$el.find('.gray-box');
-                var msg = this.translate('fieldIsUploading', 'messages').replace('{field}', this.translate(this.name, 'fields', this.model.name));
+                var msg = this.translate('fieldIsUploading', 'messages').replace('{field}', this.getLabelText());
                 this.showValidationMessage(msg, $target);
                 return true;
             }
@@ -150,6 +152,8 @@ Espo.define('views/fields/file', 'views/fields/link', function (Dep) {
             this.idName = this.name + 'Id';
             this.typeName = this.name + 'Type';
             this.foreignScope = 'Attachment';
+
+            this.previewSize = this.options.previewSize || this.params.previewSize || this.previewSize;
 
             var sourceDefs = this.getMetadata().get(['clientDefs', 'Attachment', 'sourceDefs']) || {};
 
@@ -179,6 +183,11 @@ Espo.define('views/fields/file', 'views/fields/link', function (Dep) {
                 this.acceptAttribue = this.accept.join('|');
             }
 
+            this.once('remove', function () {
+                if (this.resizeIsBeingListened) {
+                    $(window).off('resize.' + this.cid);
+                }
+            }.bind(this));
         },
 
         afterRender: function () {
@@ -217,6 +226,21 @@ Espo.define('views/fields/file', 'views/fields/link', function (Dep) {
                 var type = this.$el.find('select.search-type').val();
                 this.handleSearchType(type);
             }
+
+            if (this.mode === 'detail') {
+                if (this.previewSize === 'large') {
+                    this.handleResize();
+                    this.resizeIsBeingListened = true;
+                    $(window).on('resize.' + this.cid, function () {
+                        this.handleResize();
+                    }.bind(this));
+                }
+            }
+        },
+
+        handleResize: function () {
+            var width = this.$el.width();
+            this.$el.find('img.image-preview').css('maxWidth', width + 'px');
         },
 
         getDetailPreview: function (name, type, id) {
@@ -227,7 +251,7 @@ Espo.define('views/fields/file', 'views/fields/link', function (Dep) {
                 case 'image/png':
                 case 'image/jpeg':
                 case 'image/gif':
-                    preview = '<a data-action="showImagePreview" data-id="' + id + '" href="' + this.getImageUrl(id) + '"><img src="'+this.getBasePath()+'?entryPoint=image&size='+this.previewSize+'&id=' + id + '"></a>'; 
+                    preview = '<a data-action="showImagePreview" data-id="' + id + '" href="' + this.getImageUrl(id) + '"><img src="'+this.getBasePath()+'?entryPoint=image&size='+this.previewSize+'&id=' + id + '" class="image-preview"></a>';
             }
             return preview;
         },
@@ -261,7 +285,7 @@ Espo.define('views/fields/file', 'views/fields/link', function (Dep) {
                 if (this.showPreview && ~this.previewTypeList.indexOf(type)) {
                     string = '<div class="attachment-preview">' + this.getDetailPreview(name, type, id) + '</div>';
                 } else {
-                    string = '<span class="glyphicon glyphicon-paperclip small"></span> <a href="'+ this.getDownloadUrl(id) +'" target="_BLANK">' + Handlebars.Utils.escapeExpression(name) + '</a>';
+                    string = '<span class="fas fa-paperclip text-soft small"></span> <a href="'+ this.getDownloadUrl(id) +'" target="_BLANK">' + Handlebars.Utils.escapeExpression(name) + '</a>';
                 }
                 return string;
             }
@@ -331,7 +355,7 @@ Espo.define('views/fields/file', 'views/fields/link', function (Dep) {
             }
             if (exceedsMaxFileSize) {
                 var msg = this.translate('fieldMaxFileSizeError', 'messages')
-                          .replace('{field}', this.translate(this.name, 'fields', this.model.name))
+                          .replace('{field}', this.getLabelText())
                           .replace('{max}', maxFileSize);
                 this.showValidationMessage(msg, '.attachment-button label');
                 return;
@@ -361,7 +385,7 @@ Espo.define('views/fields/file', 'views/fields/link', function (Dep) {
                         attachment.set('file', result);
                         attachment.set('field', this.name);
 
-                        attachment.save().then(function () {
+                        attachment.save({}, {timeout: 0}).then(function () {
                             this.isUploading = false;
                             if (!isCanceled) {
                                 $attachmentBox.trigger('ready');
@@ -395,7 +419,7 @@ Espo.define('views/fields/file', 'views/fields/link', function (Dep) {
 
             var self = this;
 
-            var removeLink = '<a href="javascript:" class="remove-attachment pull-right"><span class="glyphicon glyphicon-remove"></span></a>';
+            var removeLink = '<a href="javascript:" class="remove-attachment pull-right"><span class="fas fa-times"></span></a>';
 
             var preview = name;
             if (this.showPreview && id) {

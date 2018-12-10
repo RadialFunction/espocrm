@@ -38,6 +38,41 @@ Espo.define('views/fields/varchar', 'views/fields/base', function (Dep) {
 
         searchTypeList: ['startsWith', 'contains', 'equals', 'endsWith', 'like', 'notContains', 'notEquals', 'notLike', 'isEmpty', 'isNotEmpty'],
 
+        setup: function () {
+            this.setupOptions();
+            if (this.options.customOptionList) {
+                this.setOptionList(this.options.customOptionList);
+            }
+        },
+
+        setupOptions: function () {
+        },
+
+        setOptionList: function (optionList) {
+            if (!this.originalOptionList) {
+                this.originalOptionList = this.params.options || [];
+            }
+            this.params.options = Espo.Utils.clone(optionList);
+
+            if (this.mode == 'edit') {
+                if (this.isRendered()) {
+                    this.reRender();
+                }
+            }
+        },
+
+        resetOptionList: function () {
+            if (this.originalOptionList) {
+                this.params.options = Espo.Utils.clone(this.originalOptionList);
+            }
+
+            if (this.mode == 'edit') {
+                if (this.isRendered()) {
+                    this.reRender();
+                }
+            }
+        },
+
         setupSearch: function () {
             this.events = _.extend({
                 'change select.search-type': function (e) {
@@ -58,6 +93,8 @@ Espo.define('views/fields/varchar', 'views/fields/base', function (Dep) {
             ) {
                 data.isNotEmpty = true;
             }
+            data.valueIsSet = this.model.has(this.name);
+
             if (this.mode === 'search') {
                 if (typeof this.searchParams.value === 'string') {
                     this.searchData.value = this.searchParams.value;
@@ -80,6 +117,39 @@ Espo.define('views/fields/varchar', 'views/fields/base', function (Dep) {
                 var type = this.$el.find('select.search-type').val();
                 this.handleSearchType(type);
             }
+
+            if ((this.mode == 'edit'  || this.mode == 'search') && this.params.options && this.params.options.length) {
+                this.$element.autocomplete({
+                    minChars: 0,
+                    lookup: this.params.options,
+                    maxHeight: 200,
+                    formatResult: function (suggestion) {
+                        return suggestion.value;
+                    },
+                    lookupFilter: function (suggestion, query, queryLowerCase) {
+                        if (suggestion.value.toLowerCase().indexOf(queryLowerCase) === 0) {
+                            if (suggestion.value.length === queryLowerCase.length) return false;
+                            return true;
+                        }
+                        return false;
+                    },
+                    onSelect: function () {
+                        this.trigger('change');
+                    }.bind(this)
+                });
+                this.$element.attr('autocomplete', 'espo-' + this.name);
+
+                this.$element.on('focus', function () {
+                    if (this.$element.val()) return;
+                    this.$element.autocomplete('onValueChange');
+                }.bind(this));
+                this.once('render', function () {
+                    this.$element.autocomplete('dispose');
+                }, this);
+                this.once('remove', function () {
+                    this.$element.autocomplete('dispose');
+                }, this);
+            }
         },
 
         fetch: function () {
@@ -90,12 +160,12 @@ Espo.define('views/fields/varchar', 'views/fields/base', function (Dep) {
                     value = value.trim();
                 }
             }
-            data[this.name] = value;
+            data[this.name] = value || null;
             return data;
         },
 
         fetchSearch: function () {
-            var type = this.$el.find('[name="'+this.name+'-type"]').val() || 'startsWith';
+            var type = this.fetchSearchType() || 'startsWith';
 
             var data;
 
@@ -162,4 +232,3 @@ Espo.define('views/fields/varchar', 'views/fields/base', function (Dep) {
 
     });
 });
-

@@ -52,45 +52,41 @@ Espo.define('views/fields/address', 'views/fields/base', function (Dep) {
             var data = Dep.prototype.data.call(this);
             data.ucName = Espo.Utils.upperCaseFirst(this.name);
 
-            data.postalCodeValue = this.model.get(this.postalCodeField);
-            data.streetValue = this.model.get(this.streetField);
-            data.cityValue = this.model.get(this.cityField);
-            data.stateValue = this.model.get(this.stateField);
-            data.countryValue = this.model.get(this.countryField);
+            this.addressPartList.forEach(function (item) {
+                var value = this.model.get(this[item + 'Field']);
+                data[item + 'Value'] = value;
+            }, this);
 
             if (this.mode == 'detail' || this.mode == 'list') {
                 data.formattedAddress = this.getFormattedAddress();
             }
 
-            data.isEmpty = !(data.postalCodeValue ||
-                           data.streetValue ||
-                           data.cityValue ||
-                           data.stateValue ||
-                           data.countryValue);
+            var isNotEmpty = false;
 
             return data;
         },
 
         setupSearch: function () {
-            this.searchData.value = this.getSearchParamsData().value || this.searchParams.additionalValue; 
+            this.searchData.value = this.getSearchParamsData().value || this.searchParams.additionalValue;
         },
 
         getFormattedAddress: function () {
-            var postalCodeValue = this.model.get(this.postalCodeField);
-            var streetValue = this.model.get(this.streetField);
-            var cityValue = this.model.get(this.cityField);
-            var stateValue = this.model.get(this.stateField);
-            var countryValue = this.model.get(this.countryField);
+            var isNotEmpty = false;
+            var isSet = false;
+            this.addressAttributeList.forEach(function (attribute) {
+                isNotEmpty = isNotEmpty || this.model.get(attribute);
+                isSet = isSet || this.model.has(attribute);
+            }, this);
 
-            var isEmpty = !(
-                postalCodeValue ||
-                streetValue ||
-                cityValue ||
-                stateValue ||
-                countryValue
-            );
+            var isEmpty = !isNotEmpty;
 
             if (isEmpty) {
+                if (this.mode === 'list') {
+                    return '';
+                }
+                if (!isSet) {
+                    return this.translate('...');
+                }
                 return this.translate('None');
             }
 
@@ -282,11 +278,11 @@ Espo.define('views/fields/address', 'views/fields/base', function (Dep) {
             var self = this;
 
             if (this.mode == 'edit') {
-                this.$street = this.$el.find('[name="' + this.streetField + '"]');
-                this.$postalCode = this.$el.find('[name="' + this.postalCodeField + '"]');
-                this.$state = this.$el.find('[name="' + this.stateField + '"]');
-                this.$city = this.$el.find('[name="' + this.cityField + '"]');
-                this.$country = this.$el.find('[name="' + this.countryField + '"]');
+                this.$street = this.$el.find('[data-name="' + this.streetField + '"]');
+                this.$postalCode = this.$el.find('[data-name="' + this.postalCodeField + '"]');
+                this.$state = this.$el.find('[data-name="' + this.stateField + '"]');
+                this.$city = this.$el.find('[data-name="' + this.cityField + '"]');
+                this.$country = this.$el.find('[data-name="' + this.countryField + '"]');
 
                 this.$street.on('change', function () {
                     self.trigger('change');
@@ -304,6 +300,40 @@ Espo.define('views/fields/address', 'views/fields/base', function (Dep) {
                     self.trigger('change');
                 });
 
+                var countryList = this.getConfig().get('addressCountryList') || [];
+                if (countryList.length) {
+                    this.$country.autocomplete({
+                        minChars: 0,
+                        lookup: countryList,
+                        maxHeight: 200,
+                        formatResult: function (suggestion) {
+                            return suggestion.value;
+                        },
+                        lookupFilter: function (suggestion, query, queryLowerCase) {
+                            if (suggestion.value.toLowerCase().indexOf(queryLowerCase) === 0) {
+                                if (suggestion.value.length === queryLowerCase.length) return false;
+                                return true;
+                            }
+                            return false;
+                        },
+                        onSelect: function () {
+                            this.trigger('change');
+                        }.bind(this)
+                    });
+                    this.$country.on('focus', function () {
+                        if (this.$country.val()) return;
+                        this.$country.autocomplete('onValueChange');
+                    }.bind(this));
+                    this.once('render', function () {
+                        this.$country.autocomplete('dispose');
+                    }, this);
+                    this.once('remove', function () {
+                        this.$country.autocomplete('dispose');
+                    }, this);
+
+                    this.$country.attr('autocomplete', 'espo-country');
+                }
+
                 this.$street.on('input', function (e) {
                     var numberOfLines = e.currentTarget.value.split('\n').length;
                     var numberOfRows = this.$street.prop('rows');
@@ -320,13 +350,18 @@ Espo.define('views/fields/address', 'views/fields/base', function (Dep) {
             }
         },
 
-        init: function () {
-            this.postalCodeField = this.options.defs.name + 'PostalCode';
-            this.streetField = this.options.defs.name + 'Street';
-            this.stateField = this.options.defs.name + 'State';
-            this.cityField = this.options.defs.name + 'City';
-            this.countryField = this.options.defs.name + 'Country';
-            Dep.prototype.init.call(this);
+        setup: function () {
+            Dep.prototype.setup.call(this);
+
+            var actualAttributePartList = this.getMetadata().get(['fields', this.type, 'actualFields']) || [];
+            this.addressAttributeList = [];
+            this.addressPartList = [];
+            actualAttributePartList.forEach(function (item) {
+                var attribute = this.name + Espo.Utils.upperCaseFirst(item);
+                this.addressAttributeList.push(attribute);
+                this.addressPartList.push(item);
+                this[item + 'Field'] = attribute;
+            }, this);
         },
 
         validateRequired: function () {
@@ -334,7 +369,7 @@ Espo.define('views/fields/address', 'views/fields/base', function (Dep) {
                 if (this.model.isRequired(name)) {
                     if (this.model.get(name) === '') {
                         var msg = this.translate('fieldIsRequired', 'messages').replace('{field}', this.translate(name, 'fields', this.model.name));
-                        this.showValidationMessage(msg, '[name="'+name+'"]');
+                        this.showValidationMessage(msg, '[data-name="'+name+'"]');
                         return true;
                     }
                 }
@@ -368,7 +403,7 @@ Espo.define('views/fields/address', 'views/fields/base', function (Dep) {
         },
 
         fetchSearch: function () {
-            var value = this.$el.find('[name="'+this.name+'"]').val().toString().trim();
+            var value = this.$el.find('input.main-element').val().toString().trim();
             if (value) {
                 var data = {
                     type: 'or',
@@ -397,7 +432,7 @@ Espo.define('views/fields/address', 'views/fields/base', function (Dep) {
                             type: 'like',
                             field: this.countryField,
                             value: value + '%'
-                        },
+                        }
                     ],
                     data: {
                         value: value
