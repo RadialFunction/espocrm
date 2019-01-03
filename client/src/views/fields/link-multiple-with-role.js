@@ -50,6 +50,8 @@ Espo.define('views/fields/link-multiple-with-role', 'views/fields/link-multiple'
 
             this.roleField = this.getMetadata().get('entityDefs.' + this.model.name + '.fields.' + this.name + '.columns.' + this.columnName);
 
+            this.displayRoleAsLabel = this.getMetadata().get(['entityDefs', this.model.entityType, 'fields', this.roleField, 'displayAsLabel']);
+
             if (this.roleFieldIsForeign) {
                 this.roleFieldScope = this.foreignScope;
             } else {
@@ -80,7 +82,18 @@ Espo.define('views/fields/link-multiple-with-role', 'views/fields/link-multiple'
                 role = '';
             }
             if (role != '') {
-                roleHtml = '<span class="text-muted small"> &#187; ' +
+                var style = this.getMetadata().get(['entityDefs', this.model.entityType, 'fields', this.roleField, 'style', role]) || 'muted';
+                var className = 'text';
+
+                if (this.displayRoleAsLabel) {
+                    className = 'label label-sm label';
+                    if (style === 'muted') {
+                        style = 'default';
+                    }
+                }
+
+                roleHtml = '<span class="test-muted small"> &#187; </span>' +
+                '<span class="'+className+'-'+style+' small">' +
                 this.getHelper().stripTags(this.getLanguage().translateOption(role, this.roleField, this.roleFieldScope)) +
                 '</span>';
             }

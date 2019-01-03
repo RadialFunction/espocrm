@@ -322,7 +322,7 @@ class Record extends Base
             $params['ids'] = $data->ids;
         }
 
-        return $this->getRecordService()->massRemove($params);
+        return $this->getRecordService()->massDelete($params);
     }
 
     public function actionCreateLink($params, $data, $request)
@@ -349,7 +349,7 @@ class Record extends Base
                 $selectData = json_decode(json_encode($data->selectData), true);
             }
 
-            return $this->getRecordService()->linkEntityMass($id, $link, $where, $selectData);
+            return $this->getRecordService()->linkMass($id, $link, $where, $selectData);
         } else {
             $foreignIdList = array();
             if (isset($data->id)) {

@@ -149,7 +149,7 @@ Espo.define('views/site/navbar', 'view', function (Dep) {
             if (!companyLogoId) {
                 return this.getBasePath() + (this.getThemeManager().getParam('logo') || 'client/img/logo.png');
             }
-            return this.getBasePath() + '?entryPoint=LogoImage&t=' + companyLogoId;
+            return this.getBasePath() + '?entryPoint=LogoImage&id='+companyLogoId;
         },
 
         getTabList: function () {
@@ -251,17 +251,27 @@ Espo.define('views/site/navbar', 'view', function (Dep) {
                 }
             };
 
-            var tabCount = this.tabList.length;
             var $navbar = $('#navbar .navbar');
-            var navbarNeededHeight = (this.getThemeManager().getParam('navbarHeight') || 43) + 1;
+
+            if (window.innerWidth >= smallScreenWidth) {
+                $tabs.children('li').each(function (i, li) {
+                    hideOneTab();
+                });
+                $navbar.css('max-height', 'unset');
+                $navbar.css('overflow', 'visible');
+            }
+
+            var navbarHeight = this.getThemeManager().getParam('navbarHeight') || 43;
+            var navbarBaseWidth = this.getThemeManager().getParam('navbarBaseWidth') || 556;
+
+            var tabCount = this.tabList.length;
+
+            var navbarNeededHeight = navbarHeight + 1;
 
             $moreDd = $('#nav-more-tabs-dropdown');
             $moreLi = $moreDd.closest('li');
 
-            var navbarBaseWidth = this.getThemeManager().getParam('navbarBaseWidth') || 556;
-
             var updateWidth = function () {
-                var windowWidth = $(window.document).width();
                 var windowWidth = window.innerWidth;
                 var moreWidth = $moreLi.width();
 
@@ -272,6 +282,9 @@ Espo.define('views/site/navbar', 'view', function (Dep) {
                 if (windowWidth < smallScreenWidth) {
                     return;
                 }
+
+                $navbar.css('max-height', navbarHeight + 'px');
+                $navbar.css('overflow', 'hidden');
 
                 $more.parent().addClass('hidden');
 
@@ -293,6 +306,9 @@ Espo.define('views/site/navbar', 'view', function (Dep) {
                     }
                 }
 
+                $navbar.css('max-height', 'unset');
+                $navbar.css('overflow', 'visible');
+
                 if ($more.children().length > 0) {
                     $moreDropdown.removeClass('hidden');
                 }
@@ -306,6 +322,7 @@ Espo.define('views/site/navbar', 'view', function (Dep) {
                     }, 200);
                 } else {
                     if (!isRecursive) {
+                        updateWidth();
                         setTimeout(function () {
                             processUpdateWidth(true);
                         }, 10);
@@ -365,16 +382,6 @@ Espo.define('views/site/navbar', 'view', function (Dep) {
             updateSizeForVertical();
         },
 
-        adjust: function () {
-            var navbarIsVertical = this.getThemeManager().getParam('navbarIsVertical');
-
-            if (!navbarIsVertical) {
-                this.adjustHorizontal();
-            } else {
-                this.adjustVertical();
-            }
-        },
-
         afterRender: function () {
             this.$body = $('body');
 
@@ -397,6 +404,16 @@ Espo.define('views/site/navbar', 'view', function (Dep) {
             this.$navbar = this.$el.find('> .navbar');
             this.$navbarRightContainer = this.$navbar.find('> .navbar-body > .navbar-right-container');
 
+            var handlerClassName = this.getThemeManager().getParam('navbarAdjustmentHandler');
+            if (handlerClassName) {
+                require(handlerClassName, function (Handler) {
+                    var handler = new Handler(this);
+                    handler.process();
+                }.bind(this));
+            }
+
+            if (this.getThemeManager().getParam('skipDefaultNavbarAdjustment')) return;
+
             if (this.getThemeManager().getParam('navbarIsVertical')) {
                 var process = function () {
                     if (this.$navbar.height() < $(window).height() / 2) {
@@ -407,11 +424,11 @@ Espo.define('views/site/navbar', 'view', function (Dep) {
                     }
                     if (this.getThemeManager().isUserTheme()) {
                         setTimeout(function () {
-                            this.adjust();
+                            this.adjustVertical();
                         }.bind(this), 10);
                         return;
                     }
-                    this.adjust();
+                    this.adjustVertical();
                 }.bind(this);
                 process();
             } else {
@@ -424,11 +441,11 @@ Espo.define('views/site/navbar', 'view', function (Dep) {
                     }
                     if (this.getThemeManager().isUserTheme()) {
                         setTimeout(function () {
-                            this.adjust();
+                            this.adjustHorizontal();
                         }.bind(this), 10);
                         return;
                     }
-                    this.adjust();
+                    this.adjustHorizontal();
                 }.bind(this);
                 process();
             }

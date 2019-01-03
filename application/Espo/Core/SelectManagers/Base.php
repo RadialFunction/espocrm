@@ -225,6 +225,8 @@ class Base
         $whereClause = $this->convertWhere($where, false, $result);
 
         $result['whereClause'] = array_merge($result['whereClause'], $whereClause);
+
+        $this->applyLeftJoinsFromWhere($where, $result);
     }
 
     public function convertWhere(array $where, $ignoreAdditionaFilterTypes = false, &$result = null)
@@ -854,10 +856,12 @@ class Base
             case 'today':
                 $where['type'] = 'between';
                 $dt->setTime(0, 0, 0);
+                $dtTo = clone $dt;
+                $dtTo->modify('+1 day -1 second');
                 $dt->setTimezone(new \DateTimeZone('UTC'));
+                $dtTo->setTimezone(new \DateTimeZone('UTC'));
                 $from = $dt->format($format);
-                $dt->modify('+1 day -1 second');
-                $to = $dt->format($format);
+                $to = $dtTo->format($format);
                 $where['value'] = [$from, $to];
                 break;
             case 'past':
@@ -942,12 +946,13 @@ class Base
                 break;
             case 'on':
                 $where['type'] = 'between';
-
                 $dt = new \DateTime($value, new \DateTimeZone($timeZone));
+                $dtTo = clone $dt;
+                $dtTo->modify('+1 day -1 second');
                 $dt->setTimezone(new \DateTimeZone('UTC'));
+                $dtTo->setTimezone(new \DateTimeZone('UTC'));
                 $from = $dt->format($format);
-                $dt->modify('+1 day -1 second');
-                $to = $dt->format($format);
+                $to = $dtTo->format($format);
                 $where['value'] = [$from, $to];
                 break;
             case 'before':
@@ -959,6 +964,7 @@ class Base
             case 'after':
                 $where['type'] = 'after';
                 $dt = new \DateTime($value, new \DateTimeZone($timeZone));
+                $dt->modify('+1 day -1 second');
                 $dt->setTimezone(new \DateTimeZone('UTC'));
                 $where['value'] = $dt->format($format);
                 break;
@@ -2046,5 +2052,39 @@ class Base
         }
 
         return $selectParams1;
+    }
+
+    protected function applyLeftJoinsFromWhere($where, &$result)
+    {
+        if (!is_array($where)) return;
+
+        foreach ($where as $item) {
+            $this->applyLeftJoinsFromWhereItem($item, $result);
+        }
+    }
+
+    protected function applyLeftJoinsFromWhereItem($item, &$result)
+    {
+        if (!empty($item['type'])) {
+            if (in_array($item['type'], ['or', 'and', 'not', 'having'])) {
+                if (!array_key_exists('value', $item) || !is_array($item['value'])) return;
+                foreach ($item['value'] as $listItem) {
+                    $this->applyLeftJoinsFromWhereItem($listItem, $result);
+                }
+                return;
+            }
+        }
+
+        $attibute = null;
+        if (!empty($item['attribute'])) $attibute = $item['attribute'];
+        if (!$attibute) return;
+
+        $attributeType = $this->getSeed()->getAttributeType($attibute);
+        if ($attributeType === 'foreign') {
+            $relation = $this->getSeed()->getAttributeParam($attibute, 'relation');
+            if ($relation) {
+                $this->addLeftJoin($relation, $result);
+            }
+        }
     }
 }

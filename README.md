@@ -9,7 +9,7 @@ Download the latest release from our [website](http://www.espocrm.com).
 ### Requirements
 
 * PHP 5.6 or above (with pdo, json, gd, openssl, zip, imap, mbstring, curl extensions);
-* MySQL 5.5.3 or above.
+* MySQL 5.5.3 or above, or MariaDB.
 
 For more information about server configuration see [this article](https://www.espocrm.com/documentation/administration/server-configuration/).
 
@@ -51,6 +51,12 @@ The build will be created in the `build` directory.
 ### How to contribute
 
 Before we can merge your pull request you need to accept our CLA [here](https://github.com/espocrm/cla). It's very simple to do.
+
+Branches:
+
+* hotfix/* – an upcoming maintenance release; fixes should be pushed to this branch;
+* master – an upcoming minor or major release; new features should be pushed to this branch;
+* stable – a last stable release.
 
 ### How to make a translation
 

@@ -43,6 +43,10 @@ class Job
 
     private $cronScheduledJob;
 
+    const NOT_EXISTING_PROCESS_PERIOD = 300;
+
+    const READY_NOT_STARTED_PERIOD = 60;
+
     public function __construct(Config $config, EntityManager $entityManager)
     {
         $this->config = $config;
@@ -183,69 +187,131 @@ class Job
         return $countPending;
     }
 
-    /**
-     * Mark pending jobs (all jobs that exceeded jobPeriod)
-     *
-     * @return void
-     */
-    public function markFailedJobs()
+    public function markJobsFailed()
     {
-        $this->markFailedJobsByPeriod('jobPeriodForActiveProcess');
-        $this->markFailedJobsByPeriod('jobPeriod');
+        $this->markJobsFailedByNotExistingProcesses();
+        $this->markJobsFailedReadyNotStarted();
+        $this->markJobsFailedByPeriod(true);
+        $this->markJobsFailedByPeriod();
     }
 
-    protected function markFailedJobsByPeriod($period)
+    protected function markJobsFailedByNotExistingProcesses()
     {
-        $time = time() - $this->getConfig()->get($period);
+        $timeThreshold = time() - $this->getConfig()->get('jobPeriodForNotExistingProcess', self::NOT_EXISTING_PROCESS_PERIOD);
+        $dateTimeThreshold = date('Y-m-d H:i:s', $timeThreshold);
 
-        $pdo = $this->getEntityManager()->getPDO();
+        $runningJobList = $this->getEntityManager()->getRepository('Job')->select([
+            'id',
+            'scheduledJobId',
+            'executeTime',
+            'targetId',
+            'targetType',
+            'pid',
+            'startedAt'
+        ])->where([
+            'status' => CronManager::RUNNING,
+            'startedAt<' => $dateTimeThreshold
+        ])->find();
 
-        $select = "
-            SELECT id, scheduled_job_id, execute_time, target_id, target_type, pid FROM `job`
-            WHERE
-            (`status` = '" . CronManager::RUNNING ."' OR `status` = '" . CronManager::READY ."') AND execute_time < '".date('Y-m-d H:i:s', $time)."'
-        ";
-        $sth = $pdo->prepare($select);
-        $sth->execute();
-
-        $jobData = array();
-
-        switch ($period) {
-            case 'jobPeriod':
-                while ($row = $sth->fetch(PDO::FETCH_ASSOC)) {
-                    if (empty($row['pid']) || !System::isProcessActive($row['pid'])) {
-                        $jobData[$row['id']] = $row;
-                    }
-                }
-                break;
-
-            case 'jobPeriodForActiveProcess':
-                while ($row = $sth->fetch(PDO::FETCH_ASSOC)) {
-                    $jobData[$row['id']] = $row;
-                }
-                break;
+        $failedJobList = [];
+        foreach ($runningJobList as $job) {
+            if ($job->get('pid') && !System::isProcessActive($job->get('pid'))) {
+                $failedJobList[] = $job;
+            }
         }
 
-        if (!empty($jobData)) {
-            $jobQuotedIdList = [];
-            foreach ($jobData as $jobId => $job) {
-                $jobQuotedIdList[] = $pdo->quote($jobId);
-            }
+        $this->markJobListFailed($failedJobList);
+    }
 
-            $update = "
-                UPDATE job
-                SET `status` = '" . CronManager::FAILED . "', attempts = 0
-                WHERE id IN (".implode(", ", $jobQuotedIdList).")
-            ";
+    protected function markJobsFailedReadyNotStarted()
+    {
+        $timeThreshold = time() - $this->getConfig()->get('jobPeriodForReadyNotStarted', SELF::READY_NOT_STARTED_PERIOD);
+        $dateTimeThreshold = date('Y-m-d H:i:s', $timeThreshold);
 
-            $sth = $pdo->prepare($update);
-            $sth->execute();
+        $failedJobList = $this->getEntityManager()->getRepository('Job')->select([
+            'id',
+            'scheduledJobId',
+            'executeTime',
+            'targetId',
+            'targetType',
+            'pid',
+            'startedAt'
+        ])->where([
+            'status' => CronManager::READY,
+            'startedAt<' => $dateTimeThreshold
+        ])->find();
 
-            $cronScheduledJob = $this->getCronScheduledJob();
-            foreach ($jobData as $jobId => $job) {
-                if (!empty($job['scheduled_job_id'])) {
-                    $cronScheduledJob->addLogRecord($job['scheduled_job_id'], CronManager::FAILED, $job['execute_time'], $job['target_id'], $job['target_type']);
+        $this->markJobListFailed($failedJobList);
+    }
+
+    protected function markJobsFailedByPeriod($isForActiveProcesses = false)
+    {
+        $period = 'jobPeriod';
+        if ($isForActiveProcesses) {
+            $period = 'jobPeriodForActiveProcess';
+        }
+
+        $timeThreshold = time() - $this->getConfig()->get($period, 7800);
+        $dateTimeThreshold = date('Y-m-d H:i:s', $timeThreshold);
+
+        $runningJobList = $this->getEntityManager()->getRepository('Job')->select([
+            'id',
+            'scheduledJobId',
+            'executeTime',
+            'targetId',
+            'targetType',
+            'pid',
+            'startedAt'
+        ])->where([
+            'status' => CronManager::RUNNING,
+            'executeTime<' => $dateTimeThreshold
+        ])->find();
+
+        $failedJobList = [];
+        foreach ($runningJobList as $job) {
+            if (!$isForActiveProcesses) {
+                if (!$job->get('pid') || !System::isProcessActive($job->get('pid'))) {
+                    $failedJobList[] = $job;
                 }
+            } else {
+                $failedJobList[] = $job;
+            }
+        }
+
+        $this->markJobListFailed($failedJobList);
+    }
+
+    protected function markJobListFailed($jobList)
+    {
+        if (!count($jobList)) return;
+
+        $jobIdList = [];
+        foreach ($jobList as $job) {
+            $jobIdList[] = $job->id;
+        }
+
+        $quotedIdList = [];
+        foreach ($jobIdList as $id) {
+            $quotedIdList[] = $this->getEntityManager()->getPDO()->quote($id);
+        }
+
+        $sql = "
+            UPDATE job
+            SET `status` = '" . CronManager::FAILED . "', attempts = 0
+            WHERE id IN (".implode(", ", $quotedIdList).")
+        ";
+
+        $this->getEntityManager()->getPDO()->query($sql);
+
+        foreach ($jobList as $job) {
+            if ($job->get('scheduledJobId')) {
+                $this->getCronScheduledJob()->addLogRecord(
+                    $job->get('scheduledJobId'),
+                    CronManager::FAILED,
+                    $job->get('startedAt'),
+                    $job->get('targetId'),
+                    $job->get('targetType')
+                );
             }
         }
     }

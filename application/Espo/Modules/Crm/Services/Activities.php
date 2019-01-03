@@ -108,6 +108,8 @@ class Activities extends \Espo\Core\Services\Base
                 'name',
                 ['dateStart', 'dateStart'],
                 ['dateEnd', 'dateEnd'],
+                ['dateStartDate', 'dateStartDate'],
+                ['dateEndDate', 'dateEndDate'],
                 ['VALUE:Meeting', '_scope'],
                 'assignedUserId',
                 'assignedUserName',
@@ -163,6 +165,8 @@ class Activities extends \Espo\Core\Services\Base
                 'name',
                 ['dateStart', 'dateStart'],
                 ['dateEnd', 'dateEnd'],
+                ['VALUE:', 'dateStart'],
+                ['VALUE:', 'dateEndDate'],
                 ['VALUE:Call', '_scope'],
                 'assignedUserId',
                 'assignedUserName',
@@ -225,6 +229,8 @@ class Activities extends \Espo\Core\Services\Base
                 'name',
                 ['dateSent', 'dateStart'],
                 ['VALUE:', 'dateEnd'],
+                ['VALUE:', 'dateStart'],
+                ['VALUE:', 'dateEndDate'],
                 ['VALUE:Email', '_scope'],
                 'assignedUserId',
                 'assignedUserName',
@@ -274,6 +280,8 @@ class Activities extends \Espo\Core\Services\Base
                 'name',
                 ['dateStart', 'dateStart'],
                 ['dateEnd', 'dateEnd'],
+                ['dateStartDate', 'dateStartDate'],
+                ['dateEndDate', 'dateEndDate'],
                 ['VALUE:Meeting', '_scope'],
                 'assignedUserId',
                 'assignedUserName',
@@ -385,6 +393,8 @@ class Activities extends \Espo\Core\Services\Base
                 'name',
                 ['dateStart', 'dateStart'],
                 ['dateEnd', 'dateEnd'],
+                ['VALUE:', 'dateStartDate'],
+                ['VALUE:', 'dateEndDate'],
                 ['VALUE:Call', '_scope'],
                 'assignedUserId',
                 'assignedUserName',
@@ -495,6 +505,8 @@ class Activities extends \Espo\Core\Services\Base
                 'name',
                 ['dateSent', 'dateStart'],
                 ['VALUE:', 'dateEnd'],
+                ['VALUE:', 'dateStartDate'],
+                ['VALUE:', 'dateEndDate'],
                 ['VALUE:Email', '_scope'],
                 'assignedUserId',
                 'assignedUserName',
@@ -872,8 +884,8 @@ class Activities extends \Espo\Core\Services\Base
                 ['dateStart', 'dateStart'],
                 ['dateEnd', 'dateEnd'],
                 'status',
-                ['VALUE:', 'dateStartDate'],
-                ['VALUE:', 'dateEndDate'],
+                ['dateStartDate', 'dateStartDate'],
+                ['dateEndDate', 'dateEndDate'],
                 'parentType',
                 'parentId',
                 'createdAt'
@@ -1042,8 +1054,6 @@ class Activities extends \Espo\Core\Services\Base
         }
 
         if ($seed->hasRelation('assignedUsers')) {
-            $selectManager->setDistinct(true, $selectParams);
-            $selectManager->addLeftJoin(['assignedUsers', 'assignedUsers'], $selectParams);
             $wherePart['assignedUsersMiddle.userId'] = $userId;
         }
 
@@ -1082,6 +1092,7 @@ class Activities extends \Espo\Core\Services\Base
         }
 
         if ($seed->hasRelation('assignedUsers')) {
+            $selectManager->setDistinct(true, $selectParams);
             $selectParams['leftJoins'][] = 'assignedUsers';
         }
 
@@ -1152,6 +1163,8 @@ class Activities extends \Espo\Core\Services\Base
             'name',
             ($seed->hasAttribute('dateStart') ? ['dateStart', 'dateStart'] : ['VALUE:', 'dateStart']),
             ($seed->hasAttribute('dateEnd') ? ['dateEnd', 'dateEnd'] : ['VALUE:', 'dateEnd']),
+            ($seed->hasAttribute('dateStartDate') ? ['dateStartDate', 'dateStartDate'] : ['VALUE:', 'dateStartDate']),
+            ($seed->hasAttribute('dateEndDate') ? ['dateEndDate', 'dateEndDate'] : ['VALUE:', 'dateEndDate']),
             ['VALUE:' . $scope, '_scope'],
             ($seed->hasAttribute('assignedUserId') ? ['assignedUserId', 'assignedUserId'] : ['VALUE:', 'assignedUserId']),
             ($seed->hasAttribute('assignedUserName') ? ['assignedUserName', 'assignedUserName'] : ['VALUE:', 'assignedUserName']),

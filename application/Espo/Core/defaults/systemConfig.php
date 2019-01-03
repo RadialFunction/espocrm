@@ -106,7 +106,15 @@ return [
         'internalSmtpUsername',
         'internalSmtpPassword',
         'internalSmtpSecurity',
-        'internalOutboundEmailFromAddress'
+        'internalOutboundEmailFromAddress',
+        'requiredPhpVersion',
+        'requiredMysqlVersion',
+        'recommendedMysqlParams',
+        'requiredPhpLibs',
+        'recommendedPhpLibs',
+        'recommendedPhpParams',
+        'requiredMariadbVersion',
+        'recommendedMariadbParams',
     ],
     'adminItems' => [
         'devMode',
@@ -175,12 +183,6 @@ return [
         'adminNotificationsCronIsNotConfigured',
         'adminNotificationsNewExtensionVersion',
         'leadCaptureAllowOrigin',
-        'requiredPhpVersion',
-        'requiredMysqlVersion',
-        'recommendedMysqlParams',
-        'requiredPhpLibs',
-        'recommendedPhpLibs',
-        'recommendedPhpParams',
     ],
     'superAdminItems' => [
         'jobMaxPortion',
@@ -198,8 +200,8 @@ return [
     'userItems' => [
         'outboundEmailFromAddress',
         'outboundEmailFromName',
+        'outboundEmailBccAddress',
         'integrations',
-        'googleMapsApiKey'
     ],
     'isInstalled' => false,
     'ldapUserNameAttribute' => 'sAMAccountName',
@@ -217,10 +219,12 @@ return [
         'mbstring',
         'zip',
         'gd',
+        'iconv'
     ],
     'recommendedPhpLibs' => [
         'curl',
         'xml',
+        'xmlwriter',
         'exif',
     ],
     'recommendedPhpParams' => [
